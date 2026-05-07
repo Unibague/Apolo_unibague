@@ -62,10 +62,10 @@ export class Exam {
   @Column({ type: "boolean" })
   incluirPython!: boolean;
 
-  @Column({ type: "datetime", nullable: true })
+  @Column({ type: "timestamp", nullable: true })
   horaApertura?: Date | null;
 
-  @Column({ type: "datetime", nullable: true })
+  @Column({ type: "timestamp", nullable: true })
   horaCierre?: Date | null;
 
   @Column({ type: "int", nullable: true })
@@ -86,7 +86,7 @@ export class Exam {
   @Column({ type: "boolean", default: false })
   cambioEstadoAutomatico!: boolean;
 
-  @Column({ type: "datetime", nullable: true, default: null })
+  @Column({ type: "timestamp", nullable: true, default: null })
   codigoRegeneradoEn?: Date | null;
 
   @Column({ type: "boolean", default: false })

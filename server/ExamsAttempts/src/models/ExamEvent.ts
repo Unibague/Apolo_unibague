@@ -20,7 +20,7 @@ export class ExamEvent {
   @Column({ type: "text" })
   tipo_evento!: AttemptEvent;
 
-  @Column({ type: "datetime" })
+  @Column({ type: "timestamp" })
   fecha_envio!: Date;
 
   @Index()

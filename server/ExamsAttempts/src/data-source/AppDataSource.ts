@@ -10,7 +10,7 @@ import { ExamEvent } from "../models/ExamEvent";
 const useSsl = process.env.DB_SSL === "true";
 
 export const AppDataSource = new DataSource({
-  type: "mysql",
+  type: "postgres",
   host: process.env.DB_HOST,
   database: process.env.DB_NAME,
   password: process.env.DB_PASS,
@@ -25,13 +25,13 @@ export const AppDataSource = new DataSource({
       rejectUnauthorized: true,
     },
   }),
-  connectTimeout: 30000,
+  connectTimeoutMS: 30000,
   extra: {
     // Mantiene las conexiones del pool vivas para evitar ECONNRESET en TiDB Cloud
     enableKeepAlive: true,
     keepAliveInitialDelay: 10000,
     connectionLimit: 50,
-    connectTimeout: 30000,
+    connectTimeoutMS: 30000,
     waitForConnections: true,
     queueLimit: 0,
   },

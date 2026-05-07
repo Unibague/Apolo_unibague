@@ -1,151 +1,127 @@
 services:
-  # ─── Base de datos ───
-  mysql:
-    image: mysql:8.0
-    container_name: webexams-mysql
+  apolo-postgres:
+    image: postgres:16
+    container_name: apolo-postgres
     restart: unless-stopped
-    # mysql_native_password mantiene compatibilidad con drivers viejos
-    # (el package "mysql" v2.x del backend no soporta caching_sha2_password de MySQL 8)
-    command: --default-authentication-plugin=mysql_native_password
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
-      MYSQL_USER: ${DB_USER}
-      MYSQL_PASSWORD: ${DB_PASS}
-      # Crea la primera DB; las otras 2 las creamos vía init script
-      MYSQL_DATABASE: webexams_users
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASS}
+      POSTGRES_DB: ${USERS_DB_NAME}
+    ports:
+      - "127.0.0.1:5433:5432"
     volumes:
-      - mysql_data:/var/lib/mysql
-      - ./docker/mysql-init:/docker-entrypoint-initdb.d:ro
+      - apolo_postgres_data:/var/lib/postgresql/data
     networks:
-      - webexams
+      - apolo-network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${USERS_DB_NAME}"]
       interval: 10s
       timeout: 5s
       retries: 10
       start_period: 30s
-    # No expone puerto al host por default; descomenta para conectar con MySQL Workbench
-    # ports:
-    #   - "127.0.0.1:3306:3306"
 
-  # ─── Microservicio Users (auth) ───
-  users:
+  apolo-users:
     build:
       context: ./server/Users
       dockerfile: Dockerfile
-    container_name: webexams-users
+    container_name: apolo-users
     restart: unless-stopped
     depends_on:
-      mysql:
+      apolo-postgres:
         condition: service_healthy
     environment:
-      NODE_ENV: production
+      NODE_ENV: ${NODE_ENV}
       PORT: 3000
       HOST: 0.0.0.0
-      DB_HOST: mysql
-      DB_PORT: 3306
+      DB_HOST: apolo-postgres
+      DB_PORT: 5432
       DB_USER: ${DB_USER}
       DB_PASS: ${DB_PASS}
-      DB_NAME: webexams_users
+      DB_NAME: ${USERS_DB_NAME}
       DB_SSL: "false"
       JWT_SECRET: ${JWT_SECRET}
-      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1d}
-      EXAMS_MS_URL: http://exams:3001
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN}
+      EXAMS_MS_URL: http://apolo-exams:3001
       FRONTEND_URL: ${FRONTEND_URL}
-      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID}
-      FIREBASE_CLIENT_EMAIL: ${FIREBASE_CLIENT_EMAIL}
-      FIREBASE_PRIVATE_KEY: ${FIREBASE_PRIVATE_KEY}
+    ports:
+      - "3100:3000"
     networks:
-      - webexams
+      - apolo-network
 
-  # ─── Microservicio Exams (gestión de exámenes + uploads) ───
-  exams:
+  apolo-exams:
     build:
       context: ./server/Exams
       dockerfile: Dockerfile
-    container_name: webexams-exams
+    container_name: apolo-exams
     restart: unless-stopped
     depends_on:
-      mysql:
+      apolo-postgres:
         condition: service_healthy
     environment:
-      NODE_ENV: production
+      NODE_ENV: ${NODE_ENV}
       PORT: 3001
       HOST: 0.0.0.0
-      DB_HOST: mysql
-      DB_PORT: 3306
+      DB_HOST: apolo-postgres
+      DB_PORT: 5432
       DB_USER: ${DB_USER}
       DB_PASS: ${DB_PASS}
-      DB_NAME: webexams
+      DB_NAME: ${EXAMS_DB_NAME}
       DB_SSL: "false"
       JWT_SECRET: ${JWT_SECRET}
-      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1d}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN}
       SERVICE_SECRET: ${SERVICE_SECRET}
-      USERS_MS_URL: http://users:3000
-      EXAM_ATTEMPTS_MS_URL: http://attempts:3002
+      USERS_MS_URL: http://apolo-users:3000
+      EXAM_ATTEMPTS_MS_URL: http://apolo-attempts:3002
       CORS_ORIGIN: ${FRONTEND_URL}
       UPLOADS_DIR: /app/uploads
+    ports:
+      - "3101:3001"
     volumes:
-      - uploads_data:/app/uploads
+      - apolo_uploads_data:/app/uploads
     networks:
-      - webexams
+      - apolo-network
 
-  # ─── Microservicio ExamsAttempts (intentos + emails) ───
-  attempts:
+  apolo-attempts:
     build:
       context: ./server/ExamsAttempts
       dockerfile: Dockerfile
-    container_name: webexams-attempts
+    container_name: apolo-attempts
     restart: unless-stopped
     depends_on:
-      mysql:
+      apolo-postgres:
         condition: service_healthy
     environment:
-      NODE_ENV: production
+      NODE_ENV: ${NODE_ENV}
       PORT: 3002
       HOST: 0.0.0.0
-      DB_HOST: mysql
-      DB_PORT: 3306
+      DB_HOST: apolo-postgres
+      DB_PORT: 5432
       DB_USER: ${DB_USER}
       DB_PASS: ${DB_PASS}
-      DB_NAME: webexamsattempts
+      DB_NAME: ${ATTEMPTS_DB_NAME}
       DB_SSL: "false"
       JWT_SECRET: ${JWT_SECRET}
-      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1d}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN}
       SERVICE_SECRET: ${SERVICE_SECRET}
-      USER_MS_URL: http://users:3000
-      EXAM_MS_URL: http://exams:3001
+      USER_MS_URL: http://apolo-users:3000
+      EXAM_MS_URL: http://apolo-exams:3001
       CORS_ORIGIN: ${FRONTEND_URL}
       RESEND_API_KEY: ${RESEND_API_KEY}
       SMTP_FROM: ${SMTP_FROM}
-    networks:
-      - webexams
-
-  # ─── Nginx (sirve frontend + proxy a APIs) ───
-  nginx:
-    image: nginx:alpine
-    container_name: webexams-nginx
-    restart: unless-stopped
-    depends_on:
-      - users
-      - exams
-      - attempts
     ports:
-      # Solo expuesto en localhost del host. El Nginx del host (con SSL) hace
-      # proxy a este puerto. Para deploy sin SSL puedes cambiar a "80:80".
-      - "127.0.0.1:8080:80"
-    volumes:
-      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
-      - ./client/dist:/usr/share/nginx/html:ro
+      - "3102:3002"
     networks:
-      - webexams
+      - apolo-network
 
 networks:
-  webexams:
+  apolo-network:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 10.50.0.0/24
 
 volumes:
-  mysql_data:
+  apolo_postgres_data:
     driver: local
-  uploads_data:
+  apolo_uploads_data:
     driver: local

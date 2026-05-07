@@ -27,16 +27,16 @@ export class ExamInProgress {
   @Column({ type: "text" })
   estado!: AttemptState;
 
-  @Column({ type: "datetime" })
+  @Column({ type: "timestamp" })
   fecha_inicio!: Date;
 
-  @Column({ type: "datetime", nullable: true })
+  @Column({ type: "timestamp", nullable: true })
   fecha_fin?: Date | null;
 
   @Column({ type: "varchar", unique: true, length: 10  })
   id_sesion!: string;
 
-  @Column({ type: "datetime", nullable: true })
+  @Column({ type: "timestamp", nullable: true })
   fecha_expiracion?: Date | null;
 
   @Index()

@@ -39,19 +39,19 @@ export class ExamAttempt {
   @Column({ type: "text", nullable: true })
   identificacion_estudiante?: string | null;
 
-  @Column({ type: "double", nullable: true })
+  @Column({ type: "float", nullable: true })
   puntaje?: number | null;
 
-  @Column({ type: "double" })
+  @Column({ type: "float" })
   puntajeMaximo!: number;
 
-  @Column({ type: "double", nullable: true })
+  @Column({ type: "float", nullable: true })
   progreso?: number;
 
-  @Column({ type: "datetime" })
+  @Column({ type: "timestamp" })
   fecha_inicio!: Date;
 
-  @Column({ type: "datetime", nullable: true })
+  @Column({ type: "timestamp", nullable: true })
   fecha_fin?: Date | null;
 
   @Column({ type: "varchar", length: 50, nullable: true })
@@ -60,10 +60,10 @@ export class ExamAttempt {
   @Column({ type: "varchar", length: 50 })
   consecuencia!: string; // "ninguna", "notificar", "bloquear"
 
-  @Column({ type: "double", nullable: true, default: null })
+  @Column({ type: "float", nullable: true, default: null })
   porcentaje?: number | null;
 
-  @Column({ type: "double", nullable: true, default: null })
+  @Column({ type: "float", nullable: true, default: null })
   notaFinal?: number | null;
 
   @Column({ type: "boolean", default: false })

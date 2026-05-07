@@ -7,7 +7,7 @@ import { User } from "../models/User";
 const useSsl = process.env.DB_SSL === "true";
 
 export const AppDataSource = new DataSource({
-  type: "mysql",
+  type: "postgres",
   host: process.env.DB_HOST || "localhost",
   database: process.env.DB_NAME || "webexams",
   password: process.env.DB_PASS || "",

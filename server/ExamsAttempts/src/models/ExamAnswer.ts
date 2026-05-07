@@ -27,10 +27,10 @@ export class ExamAnswer {
   @Column()
   pregunta_id!: number;
 
-  @Column({ type: "mediumtext", nullable: true, default: null })
+  @Column({ type: "text", nullable: true, default: null })
   respuesta?: string | null;
 
-  @Column({ type: "datetime" })
+  @Column({ type: "timestamp" })
   fecha_respuesta!: Date;
 
   @Index()
@@ -41,7 +41,7 @@ export class ExamAnswer {
   @JoinColumn({ name: "intento_id" })
   intento!: ExamAttempt;
 
-  @Column({ type: "double", nullable: true, default: null })
+  @Column({ type: "float", nullable: true, default: null })
   puntaje?: number | null;
 
   @Column({ type: "varchar", nullable: true, length: 2000 })

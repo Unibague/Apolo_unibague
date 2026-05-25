@@ -81,9 +81,10 @@ export class UserService {
       throw new Error("Token de Google requerido");
     }
 
-    let googleUser: { email: string; given_name?: string; family_name?: string; name?: string; picture?: string };
+    type GoogleUserInfo = { email: string; given_name?: string; family_name?: string; name?: string; picture?: string };
+    let googleUser: GoogleUserInfo;
     try {
-      const { data } = await axios.get("https://www.googleapis.com/oauth2/v3/userinfo", {
+      const { data } = await axios.get<GoogleUserInfo>("https://www.googleapis.com/oauth2/v3/userinfo", {
         headers: { Authorization: `Bearer ${googleAccessToken}` },
       });
       googleUser = data;

@@ -4,16 +4,15 @@
     "module": "CommonJS",
     "lib": ["ES2020"],                        
     "strict": true,
-    "baseUrl": "./",
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "outDir": "dist", 
+    "outDir": "dist",
     "rootDir": "src",
-    "esModuleInterop": true,                 
-    "skipLibCheck": true,                     
+    "esModuleInterop": true,
+    "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "paths": {
-      "@src/*": ["src/*"]
+      "@src/*": ["./src/*"]
     },
     "useUnknownInCatchVariables": false,
     "sourceMap": false,

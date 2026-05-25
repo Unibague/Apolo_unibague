@@ -14,8 +14,7 @@
       "@src/*": ["src/*"]
     },
     "useUnknownInCatchVariables": false,
-    
-    "types": ["vitest/globals"],
+    "ignoreDeprecations": "6.0",
   },
   "ts-node": {
     "swc": true,

@@ -16,6 +16,7 @@
       "@src/*": ["src/*"]
     },
     "useUnknownInCatchVariables": false,
+    "ignoreDeprecations": "6.0",
     "sourceMap": false,
     "removeComments": true
   },

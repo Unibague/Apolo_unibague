@@ -12,7 +12,6 @@ import { throwHttpError } from "../utils/errors";
 import { AddUserDto } from "../dtos/Add-user.dto";
 import { CommonValidator } from "../validators/common";
 import { EditUserDto } from "../dtos/Edit-user.dto";
-import { firebaseAdmin } from "../firebase-admin";
 
 const EXAMS_MS_URL = process.env.EXAMS_MS_URL;
 const JWT_SECRET = process.env.JWT_SECRET!;
@@ -77,30 +76,41 @@ export class UserService {
     };
   }
 
-  async loginWithFirebaseToken(firebaseIdToken: string) {
-    if (!firebaseIdToken) {
-      throw new Error("Token de Firebase requerido");
+  async loginWithGoogleToken(googleAccessToken: string) {
+    if (!googleAccessToken) {
+      throw new Error("Token de Google requerido");
     }
 
-    // Verificar el token con Firebase Admin
-    let decodedToken;
+    let googleUser: { email: string; given_name?: string; family_name?: string; name?: string; picture?: string };
     try {
-      decodedToken = await firebaseAdmin.auth().verifyIdToken(firebaseIdToken);
-    } catch (error: any) {
-      throw new Error("Token de Firebase inválido o expirado");
+      const { data } = await axios.get("https://www.googleapis.com/oauth2/v3/userinfo", {
+        headers: { Authorization: `Bearer ${googleAccessToken}` },
+      });
+      googleUser = data;
+    } catch {
+      throw new Error("Token de Google inválido o expirado");
     }
 
-    const email = decodedToken.email;
+    const email = googleUser.email;
     if (!email) {
-      throw new Error("El token de Firebase no contiene un email");
+      throw new Error("No se pudo obtener el email de Google");
     }
 
-    const usuario = await this.user_repository.findOne({
-      where: { email },
-    });
+    let usuario = await this.user_repository.findOne({ where: { email } });
 
     if (!usuario) {
-      throw new Error("No se encontró un usuario con ese correo. Regístrate primero.");
+      const firstName = googleUser.given_name || googleUser.name?.split(" ")[0] || "Usuario";
+      const lastName = googleUser.family_name || googleUser.name?.split(" ").slice(1).join(" ") || "Google";
+
+      usuario = await this.AddUser({
+        nombres: firstName,
+        apellidos: lastName,
+        email,
+        contrasena: undefined as any,
+        confirmar_nueva_contrasena: undefined as any,
+        login_method: "google",
+        foto_perfil: googleUser.picture,
+      });
     }
 
     if (!JWT_SECRET) {
@@ -111,20 +121,14 @@ export class UserService {
       id: usuario.id,
       email: usuario.email,
       nombres: usuario.nombres,
-      apellidos: usuario.apellidos
+      apellidos: usuario.apellidos,
     };
 
     const token = jwt.sign(payload, JWT_SECRET, { expiresIn: "6h" });
 
-    await this.user_repository.update(usuario.id, {
-      ultimo_acceso: new Date()
-    });
+    await this.user_repository.update(usuario.id, { ultimo_acceso: new Date() });
 
-    return {
-      message: "Login exitoso",
-      token,
-      usuario: payload,
-    };
+    return { message: "Login exitoso", token, usuario: payload };
   }
 
   async AddUser(rawData: any): Promise<User> {

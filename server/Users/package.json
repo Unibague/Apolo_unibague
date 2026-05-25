@@ -26,7 +26,6 @@
     "dayjs": "^1.11.19",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
-    "firebase-admin": "^10.3.0",
     "helmet": "^8.1.0",
     "inserturlparams": "^2.0.5",
     "jet-env": "^1.1.4",

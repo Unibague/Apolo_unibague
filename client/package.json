@@ -26,7 +26,7 @@
     "@tiptap/react": "^3.14.0",
     "@tiptap/starter-kit": "^3.14.0",
     "axios": "^1.13.2",
-    "firebase": "^12.7.0",
+    "@react-oauth/google": "^0.12.1",
     "glpk.js": "^5.0.0",
     "jspdf": "^4.2.0",
     "lexical": "^0.39.0",

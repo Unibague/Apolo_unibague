@@ -130,13 +130,13 @@ export class UserController {
 
   static async loginWithGoogle(req: AuthenticatedRequest, res: Response) {
     try {
-      const { firebaseIdToken } = req.body;
+      const { googleAccessToken } = req.body;
 
-      if (!firebaseIdToken) {
-        return res.status(400).json({ message: "Token de Firebase requerido" });
+      if (!googleAccessToken) {
+        return res.status(400).json({ message: "Token de Google requerido" });
       }
 
-      const { message, token, usuario } = await user_service.loginWithFirebaseToken(firebaseIdToken);
+      const { message, token, usuario } = await user_service.loginWithGoogleToken(googleAccessToken);
 
       res.cookie("token", token, {
         httpOnly: true,

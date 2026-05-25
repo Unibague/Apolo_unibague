@@ -26,6 +26,7 @@ export class AddUserDto {
   @IsEmail({}, { message: "Ingrese un correo electrónico válido" })
   email!: string;
 
+  @ValidateIf((o) => !o.login_method || o.login_method === 'email')
   @IsNotEmpty({ message: "La contraseña es obligatoria" })
   @IsString({ message: "La contraseña debe ser un string" })
   @MinLength(8, { message: "La contraseña debe tener al menos 8 caracteres" })

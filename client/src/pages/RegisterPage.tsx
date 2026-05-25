@@ -1,44 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Moon, Sun, ChevronLeft } from 'lucide-react';
+import { useGoogleLogin } from '@react-oauth/google';
 import logoUniversidad from '../../assets/logo-universidad.webp';
 import logoUniversidadNoche from '../../assets/logo-universidad-noche.webp';
 import fondoImagen from '../../assets/fondo.webp';
 import { authService } from '../services/authService';
-
-// Importa Firebase
-import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, type Auth } from 'firebase/auth';
-
-// ============================================
-// CONFIGURACIÓN DE FIREBASE (con manejo seguro de errores)
-// ============================================
-const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID
-};
-
-let app: FirebaseApp | null = null;
-let auth: Auth | null = null;
-let googleProvider: GoogleAuthProvider | null = null;
-
-try {
-  if (firebaseConfig.apiKey && firebaseConfig.projectId) {
-    app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-    auth = getAuth(app);
-    googleProvider = new GoogleAuthProvider();
-    googleProvider.setCustomParameters({ prompt: 'select_account' });
-  } else {
-    console.warn('Firebase no está configurado — el registro/login con Google estará desactivado.');
-  }
-} catch (err) {
-  console.warn('No se pudo inicializar Firebase. El registro/login con Google estará desactivado.', err);
-}
-void app;
 
 // ============================================
 // INTERFACES
@@ -198,69 +165,51 @@ export default function RegisterPage() {
     return true;
   };
 
-  /**
-   * REGISTRO CON EMAIL Y CONTRASEÑA
-   */
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-
-    // Validar formulario
-    if (!validateForm()) {
-      return;
-    }
-
-    if (!auth) {
-      setError('La autenticación no está disponible. Verifica la configuración de Firebase.');
-      return;
-    }
+    if (!validateForm()) return;
 
     setLoading(true);
-
     try {
       await authService.registerWithEmail(
-        auth,
         formData.nombre,
         formData.apellido,
         formData.email,
-        formData.password
+        formData.password,
       );
       navigate('/');
-      
     } catch (error: any) {
-      console.error('❌ Error al registrar:', error);
-      
-      // Mostrar mensaje de error amigable
       setError(error.message || 'Error al registrar usuario. Intenta de nuevo.');
     } finally {
       setLoading(false);
     }
   };
 
-  /**
-   * REGISTRO CON GOOGLE
-   */
-  const handleGoogleRegister = async () => {
-    if (!auth || !googleProvider) {
-      setError('Registro con Google no disponible (Firebase no está configurado).');
-      return;
-    }
-
-    setLoadingGoogle(true);
-    setLoading(true);
-    setError('');
-
-    try {
-      await authService.registerWithGoogle(auth, googleProvider);
-      navigate('/');
-    } catch (error: any) {
-      if (!error.message.includes('cancelada')) {
-        setError(error.message || 'Error al registrarse con Google.');
+  const googleRegister = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      try {
+        await authService.loginWithGoogle(tokenResponse.access_token);
+        navigate('/');
+      } catch (err: any) {
+        setError(err.message || 'Error al registrarse con Google.');
+      } finally {
+        setLoadingGoogle(false);
+        setLoading(false);
       }
-    } finally {
+    },
+    onError: () => {
+      setError('No se pudo completar el registro con Google.');
       setLoadingGoogle(false);
       setLoading(false);
-    }
+    },
+  });
+
+  const handleGoogleRegister = () => {
+    setError('');
+    setLoadingGoogle(true);
+    setLoading(true);
+    googleRegister();
   };
 
   // ============================================

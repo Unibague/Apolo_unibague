@@ -18,8 +18,6 @@ const HomeContent = lazy(() => import("./HomeView"));
 const VerExamen = lazy(() => import("./ExamDetailView"));
 const VigilanciaExamenesLista = lazy(() => import("./ExamMonitorView"));
 import ConfirmModal from "../../components/ConfirmModal";
-import { getApps } from "firebase/app";
-import { getAuth } from "firebase/auth";
 import { usersService } from "../../services/authService";
 import { usersApi } from "../../services/api";
 import { getAuthToken, clearAuthToken } from "../../services/authToken";
@@ -100,24 +98,6 @@ export default function DashboardPage() {
           localStorage.removeItem("usuario");
           window.location.href = "/login";
           return;
-        }
-
-        // Restaurar token en memoria si se perdió (ej: recarga de página)
-        if (!getAuthToken()) {
-          try {
-            const apps = getApps();
-            if (apps.length > 0) {
-              const auth = getAuth(apps[0]);
-              await (auth as any).authStateReady?.();
-              const firebaseUser = auth.currentUser;
-              if (firebaseUser) {
-                const idToken = await firebaseUser.getIdToken();
-                await usersService.loginWithGoogleToken(idToken);
-              }
-            }
-          } catch {
-            // Si falla silenciosamente, el interceptor de examsApi retornará 401
-          }
         }
 
         // Verificar expiración del token localmente antes de llamar al backend

@@ -14,7 +14,6 @@
       "@src/*": ["src/*"]
     },
     "useUnknownInCatchVariables": false,
-    "ignoreDeprecations": "6.0",
   },
   "ts-node": {
     "swc": true,

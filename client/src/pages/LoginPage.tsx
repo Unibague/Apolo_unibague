@@ -87,6 +87,10 @@ export default function LoginPage() {
     setLoadingGoogle(true);
     setLoading(true);
     googleLogin();
+    // Liberar el estado si el popup se cierra sin respuesta (COOP lo bloquea)
+    setTimeout(() => {
+      setLoadingGoogle((prev) => { if (prev) { setLoading(false); } return false; });
+    }, 60000);
   };
 
   return (
@@ -143,7 +147,7 @@ export default function LoginPage() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  onKeyPress={handleKeyPress}
+                  onKeyDown={handleKeyPress}
                   placeholder="Correo electrónico"
                   disabled={loading}
                   className={`w-full px-4 py-3.5 border rounded-lg text-base outline-none transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed bg-raised border-ui text-primary ${
@@ -157,7 +161,7 @@ export default function LoginPage() {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  onKeyPress={handleKeyPress}
+                  onKeyDown={handleKeyPress}
                   placeholder="Contraseña"
                   disabled={loading}
                   className={`w-full px-4 py-3.5 border rounded-lg text-base outline-none transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed bg-raised border-ui text-primary ${

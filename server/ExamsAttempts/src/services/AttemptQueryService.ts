@@ -4,7 +4,7 @@ import { ExamEvent } from "../models/ExamEvent";
 import { ExamInProgress } from "../models/ExamInProgress";
 import { TipoRespuesta } from "../models/ExamAnswer";
 import { ExamAttemptValidator } from "../validators/ExamAttemptValidator";
-import { In, Raw } from "typeorm";
+import { In } from "typeorm";
 import { throwHttpError } from "../utils/errors";
 import { QuestionResponseBuilder } from "./QuestionResponseBuilder";
 import { internalHttpClient } from "../utils/httpClient";
@@ -130,7 +130,7 @@ export class AttemptQueryService {
 
     // Buscar directamente el intento por codigoRevision (case-sensitive)
     const attempt = await attemptRepo.findOne({
-      where: { codigoRevision: Raw((col) => `BINARY ${col} = :codigo`, { codigo: codigo_acceso }) },
+      where: { codigoRevision: codigo_acceso },
       relations: ["respuestas"],
     });
 

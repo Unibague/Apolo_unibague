@@ -18,7 +18,7 @@ import { MatchItemB } from "../models/MatchItemB";
 import { MatchPair } from "../models/MatchPair";
 import { OpenQuestionKeyword } from "../models/OpenQuestionKeyWord";
 
-// SSL solo si DB_SSL=true (necesario para algunas BDs gestionadas; MySQL local no lo requiere)
+// SSL solo si DB_SSL=true (necesario para algunas BDs gestionadas; Postgres local no lo requiere)
 const useSsl = process.env.DB_SSL === "true";
 
 // crear el AppDataSource (Conexión BD)
@@ -51,13 +51,10 @@ export const AppDataSource = new DataSource({
       rejectUnauthorized: true,
     },
   }),
-  connectTimeoutMS: 30000,
   extra: {
-    enableKeepAlive: true,
-    keepAliveInitialDelay: 10000,
-    connectionLimit: 10,
-    connectTimeoutMS: 30000,
-    waitForConnections: true,
-    queueLimit: 0,
+    max: 10,
+    keepAlive: true,
+    keepAliveInitialDelayMillis: 10000,
+    connectionTimeoutMillis: 30000,
   },
 });

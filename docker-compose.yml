@@ -20,10 +20,13 @@ services:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASS}
       POSTGRES_DB: ${USERS_DB_NAME}
+      EXAMS_DB_NAME: ${EXAMS_DB_NAME}
+      ATTEMPTS_DB_NAME: ${ATTEMPTS_DB_NAME}
     ports:
       - "127.0.0.1:5433:5432"
     volumes:
       - apolo_postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres-init:/docker-entrypoint-initdb.d:ro
     networks:
       - apolo-network
     healthcheck:

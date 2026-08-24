@@ -9,7 +9,6 @@ import { examenValidator } from "../validators/examen-validator";
 import { QuestionValidator } from "../validators/question-validator";
 import { throwHttpError } from "../utils/errors";
 import { schedulerService } from "../scheduler/examScheduler";
-import { Raw } from "typeorm";
 import { internalHttpClient } from "../utils/httpClient";
 import { ExamenState } from "../types/Exam";
 import { UpdateExamDto } from "../dtos/update-exam.dto";
@@ -449,7 +448,7 @@ export class ExamService {
 
   async getExamByCodigo(codigoExamen: string) {
     const examen = await this.examRepo.findOne({
-      where: { codigoExamen: Raw((col) => `BINARY ${col} = :codigo`, { codigo: codigoExamen }) },
+      where: { codigoExamen },
       relations: ["questions"],
     });
 
@@ -527,7 +526,7 @@ export class ExamService {
     const examRepo = AppDataSource.getRepository(Exam);
 
     const exam = await examRepo.findOne({
-      where: { codigoExamen: Raw((col) => `BINARY ${col} = :codigo`, { codigo }) },
+      where: { codigoExamen: codigo },
       relations: [
         "questions",
         "questions.options",

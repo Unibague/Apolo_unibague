@@ -35,20 +35,20 @@ Despliegue del proyecto en un servidor Linux usando **Docker Compose**. Probado 
             │     └───────┼──────────┘            │
             │             │                       │
             │      ┌──────▼─────┐                 │
-            │      │   MySQL    │ ← volume persistente
-            │      │   8.0      │                 │
+            │      │ PostgreSQL │ ← volume persistente
+            │      │     16     │                 │
             │      └────────────┘                 │
             ╰─────────────────────────────────────╯
                   ↑                ↑
                   │                │
-            mysql_data       uploads_data
+          postgres_data      uploads_data
             (volume)         (volume — imágenes/PDFs)
 ```
 
 **Componentes:**
 - 3 microservicios Node 20 + Express + TypeORM (Users `:3000`, Exams `:3001`, ExamsAttempts `:3002`)
 - 1 frontend React/Vite (build estático servido por Nginx interno)
-- 1 MySQL 8.0
+- 1 PostgreSQL 16 (una instancia, 3 bases de datos lógicas — una por microservicio)
 - 2 Nginx (uno interno al stack, uno en el host con SSL)
 - **WebSockets** (socket.io) para monitoreo de exámenes en tiempo real (ExamsAttempts)
 - **Scheduler** automático en Exams para gestionar estados de exámenes
@@ -134,7 +134,6 @@ nano .env
 
 | Variable | Cómo generar |
 |---|---|
-| `DB_ROOT_PASSWORD` | `openssl rand -hex 16` |
 | `DB_PASS` | `openssl rand -hex 16` |
 | `JWT_SECRET` | `openssl rand -hex 64` |
 | `SERVICE_SECRET` | `openssl rand -hex 32` |
@@ -164,7 +163,7 @@ make deploy
 Eso ejecuta tres pasos:
 1. **`make frontend-build`** → instala deps de `client/` y corre `npm run build` (genera `client/dist/`)
 2. **`make build`** → construye las imágenes Docker de los 3 microservicios
-3. **`make up`** → levanta el stack (mysql + 3 servicios + nginx interno)
+3. **`make up`** → levanta el stack (postgres + 3 servicios + nginx interno)
 
 Verifica que todo está corriendo:
 
@@ -173,7 +172,9 @@ make ps        # debe mostrar 5 containers en estado "Up" (sano)
 make logs      # logs en vivo de todos los servicios
 ```
 
-En el primer arranque MySQL crea las 3 BDs automáticamente vía [docker/mysql-init/01-databases.sql](docker/mysql-init/01-databases.sql), y TypeORM (con `synchronize: true`) crea las tablas desde las entidades.
+En el primer arranque (volumen de Postgres vacío), la imagen crea automáticamente la BD `USERS_DB_NAME` (vía `POSTGRES_DB`), y [docker/postgres-init/01-databases.sh](docker/postgres-init/01-databases.sh) crea las otras 2 (`EXAMS_DB_NAME`, `ATTEMPTS_DB_NAME`). TypeORM (con `synchronize: true`) crea las tablas desde las entidades.
+
+⚠️ Ese script de init **solo corre la primera vez**, con el volumen `apolo_postgres_data` vacío. Si ya tienes un volumen existente al que le faltan `EXAMS_DB_NAME` o `ATTEMPTS_DB_NAME`, créalas a mano una vez: `make shell-postgres` → `CREATE DATABASE nombre_db;`.
 
 ---
 
@@ -323,7 +324,7 @@ sudo ufw allow 'Nginx Full'   # 80 + 443
 sudo ufw --force enable
 ```
 
-Los puertos 3000–3002 y 3306 (MySQL) **no** se exponen al exterior — solo viven en la red interna de Docker.
+Los puertos 3000–3002 y 5432 (PostgreSQL) **no** se exponen al exterior — solo viven en la red interna de Docker.
 
 ---
 
@@ -388,8 +389,8 @@ make backup        # genera backups/db-FECHA.sql.gz + uploads-FECHA.tar.gz
 make restore FILE=backups/db-2026-04-30.sql.gz
 
 # Acceso a containers
-make shell-mysql   # cliente MySQL (root)
-make shell-exams   # shell dentro del container exams
+make shell-postgres # cliente psql
+make shell-exams    # shell dentro del container exams
 
 # Limpieza completa (DESTRUCTIVO — borra volúmenes y datos)
 make clean
@@ -431,13 +432,14 @@ docker compose config   # validar el yaml
 - Logs: `make logs-attempts` — busca mensajes de conexión/desconexión de socket.io
 
 ### Imágenes/PDFs no aparecen tras subir
-- Verifica el volumen: `docker volume inspect webexams_uploads_data`
+- Verifica el volumen: `docker volume ls | grep uploads` y luego `docker volume inspect <nombre>`
 - Logs del servicio Exams: `make logs-exams` — busca `✅ Imagen guardada en disco`
-- Debe existir el directorio dentro del container: `docker compose exec exams ls /app/uploads/images`
+- Debe existir el directorio dentro del container: `docker compose exec apolo-exams ls /app/uploads/images`
 
-### MySQL no acepta conexiones desde los servicios
-- Verifica que el health check de mysql pasa: `docker compose ps mysql` (debe decir `healthy`)
-- Las tablas no se crean → confirma que las DBs sí existen: `make shell-mysql` → `SHOW DATABASES;`
+### PostgreSQL no acepta conexiones desde los servicios
+- Verifica que el health check de postgres pasa: `docker compose ps apolo-postgres` (debe decir `healthy`)
+- Las tablas no se crean → confirma que las 3 BDs sí existen: `make shell-postgres` → `\l`
+- Si falta `EXAMS_DB_NAME` o `ATTEMPTS_DB_NAME` (p. ej. porque el volumen ya existía antes de añadir el init script), créalas a mano: `make shell-postgres` → `CREATE DATABASE nombre_db;`
 
 ### "Error al validar el examen" / 500 en check-duplicate
 - `JWT_SECRET` y `SERVICE_SECRET` deben ser idénticos en los 3 servicios. Como aquí los tomamos del mismo `.env` raíz, este error no debería ocurrir, pero verifica con `docker compose config` que las vars se inyectan bien.
@@ -469,8 +471,8 @@ Si actualmente tienes el frontend en Vercel y el backend en otro proveedor:
 4. **Sigue el Quick Start** arriba.
 5. **Restaura los datos**:
    ```bash
-   gunzip -c backup-vercel.sql.gz | make shell-mysql
-   # uploads: cópialos a /var/lib/docker/volumes/webexams_uploads_data/_data/
+   make restore FILE=backup-vercel.sql.gz
+   # uploads: cópialos al volumen de uploads (ver `docker volume inspect` en Troubleshooting)
    ```
 6. **Apunta el DNS** a la IP de tu nuevo servidor Linux.
 7. **Apaga los servicios viejos** (Vercel project, Railway, etc.) cuando confirmes que todo funciona.
@@ -488,7 +490,7 @@ WebExams/
 ├── package.json                        ← script `npm run dev` para desarrollo local
 ├── docker/
 │   ├── nginx/default.conf              ← config Nginx INTERNO (proxy a microservicios + socket.io)
-│   └── mysql-init/01-databases.sql     ← crea las 3 BDs al primer arranque
+│   └── postgres-init/01-databases.sh   ← crea las BDs de Exams y Attempts al primer arranque
 ├── deploy/
 │   ├── setup-server.sh                 ← instala Docker, Node, Nginx en el server
 │   └── nginx-host.conf.example         ← config Nginx del HOST (proxy + SSL)

@@ -9,7 +9,7 @@ import {
   generateAccessCode,
   generateSessionId,
 } from "../utils/CodeGenerator";
-import { Raw, In } from "typeorm";
+import { In } from "typeorm";
 import { throwHttpError } from "../utils/errors";
 import { StartExamAttemptDto } from "../dtos/Start-ExamAttempt.dto";
 import { ResumeExamAttemptDto } from "../dtos/Resume-ExamAttempt.dto";
@@ -160,7 +160,7 @@ export class AttemptLifecycleService {
     const attemptRepo = AppDataSource.getRepository(ExamAttempt);
 
     const examInProgress = await progressRepo.findOne({
-      where: { codigo_acceso: Raw((col) => `BINARY ${col} = :codigo`, { codigo: data.codigo_acceso }) },
+      where: { codigo_acceso: data.codigo_acceso },
     });
 
     if (!examInProgress) {

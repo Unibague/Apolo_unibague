@@ -1,4 +1,4 @@
-.PHONY: help build up down restart logs ps shell-mysql shell-exams shell-users shell-attempts \
+.PHONY: help build up down restart logs ps shell-postgres shell-exams shell-users shell-attempts \
         backup restore frontend-build deploy update clean
 
 # Default — muestra ayuda
@@ -7,7 +7,7 @@ help:
 	@echo ""
 	@echo "  Build & ejecución:"
 	@echo "    make build           Construye las imágenes Docker (sin levantar)"
-	@echo "    make up              Levanta todo el stack (mysql + 3 servicios + nginx)"
+	@echo "    make up              Levanta todo el stack (postgres + 3 servicios + nginx)"
 	@echo "    make down            Detiene y elimina los containers (NO borra volúmenes)"
 	@echo "    make restart         Reinicia todos los containers"
 	@echo "    make ps              Lista containers corriendo"
@@ -17,7 +17,7 @@ help:
 	@echo "    make logs-exams      Logs solo del servicio Exams"
 	@echo "    make logs-users      Logs solo del servicio Users"
 	@echo "    make logs-attempts   Logs solo del servicio ExamsAttempts"
-	@echo "    make logs-mysql      Logs solo de MySQL"
+	@echo "    make logs-postgres   Logs solo de Postgres"
 	@echo ""
 	@echo "  Frontend:"
 	@echo "    make frontend-build  Compila el cliente Vite (genera client/dist/)"
@@ -27,14 +27,14 @@ help:
 	@echo "    make update          Pull + rebuild + restart (actualizar versión)"
 	@echo ""
 	@echo "  Acceso a containers:"
-	@echo "    make shell-mysql     Abre cliente MySQL dentro del container"
+	@echo "    make shell-postgres  Abre cliente psql dentro del container"
 	@echo "    make shell-exams     Abre shell en el container exams"
 	@echo "    make shell-users     Abre shell en el container users"
 	@echo "    make shell-attempts  Abre shell en el container attempts"
 	@echo ""
 	@echo "  Backup:"
 	@echo "    make backup          Backup completo (BDs + uploads) a backups/"
-	@echo "    make restore FILE=backups/db-2026-04-30.sql.gz   Restaura una BD"
+	@echo "    make restore FILE=backups/db-2026-04-30.sql.gz   Restaura las BDs"
 	@echo ""
 	@echo "  Limpieza:"
 	@echo "    make clean           Borra containers, volúmenes Y datos (¡destructivo!)"
@@ -61,16 +61,16 @@ logs:
 	docker compose logs -f --tail=200
 
 logs-exams:
-	docker compose logs -f --tail=200 exams
+	docker compose logs -f --tail=200 apolo-exams
 
 logs-users:
-	docker compose logs -f --tail=200 users
+	docker compose logs -f --tail=200 apolo-users
 
 logs-attempts:
-	docker compose logs -f --tail=200 attempts
+	docker compose logs -f --tail=200 apolo-attempts
 
-logs-mysql:
-	docker compose logs -f --tail=200 mysql
+logs-postgres:
+	docker compose logs -f --tail=200 apolo-postgres
 
 # ── Frontend (se construye en el host, dist/ se monta como volumen en nginx) ──
 frontend-build:
@@ -92,28 +92,27 @@ update:
 	@echo "✅ Actualización completada"
 
 # ── Shells ──
-shell-mysql:
-	docker compose exec mysql mysql -u root -p
+shell-postgres:
+	docker compose exec apolo-postgres psql -U $$(grep -m1 '^DB_USER=' .env | cut -d= -f2)
 
 shell-exams:
-	docker compose exec exams sh
+	docker compose exec apolo-exams sh
 
 shell-users:
-	docker compose exec users sh
+	docker compose exec apolo-users sh
 
 shell-attempts:
-	docker compose exec attempts sh
+	docker compose exec apolo-attempts sh
 
 # ── Backup ──
 backup:
 	@mkdir -p backups
 	@echo "📦 Respaldando bases de datos..."
-	@docker compose exec -T mysql mysqldump -u root -p$$(grep DB_ROOT_PASSWORD .env | cut -d= -f2) \
-		--databases webexams_users webexams webexamsattempts \
+	@docker compose exec -T apolo-postgres pg_dumpall -U $$(grep -m1 '^DB_USER=' .env | cut -d= -f2) \
 		| gzip > backups/db-$$(date +%Y-%m-%d_%H%M).sql.gz
 	@echo "📦 Respaldando uploads..."
-	@docker run --rm -v webexams_uploads_data:/uploads -v $(PWD)/backups:/backup alpine \
-		tar czf /backup/uploads-$$(date +%Y-%m-%d_%H%M).tar.gz -C /uploads .
+	@docker compose exec -T apolo-exams tar czf - -C /app/uploads . \
+		> backups/uploads-$$(date +%Y-%m-%d_%H%M).tar.gz
 	@echo "✅ Backup creado en backups/"
 	@ls -lh backups/ | tail -5
 
@@ -122,7 +121,7 @@ restore:
 	@if [ -z "$(FILE)" ]; then echo "❌ Uso: make restore FILE=backups/db-XXX.sql.gz"; exit 1; fi
 	@echo "⚠️  Restaurando $(FILE) — esto sobrescribe las BDs actuales."
 	@read -p "¿Continuar? (y/N) " ok && [ "$$ok" = "y" ]
-	gunzip -c $(FILE) | docker compose exec -T mysql mysql -u root -p$$(grep DB_ROOT_PASSWORD .env | cut -d= -f2)
+	gunzip -c $(FILE) | docker compose exec -T apolo-postgres psql -U $$(grep -m1 '^DB_USER=' .env | cut -d= -f2)
 	@echo "✅ Restore completado"
 
 # ── Limpieza destructiva (borra TODO, incluida la BD) ──

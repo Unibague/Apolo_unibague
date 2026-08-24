@@ -3,7 +3,7 @@ import "reflect-metadata";
 
 import { User } from "../models/User";
 
-// SSL solo si DB_SSL=true (necesario para algunas BDs gestionadas; MySQL local no lo requiere)
+// SSL solo si DB_SSL=true (necesario para algunas BDs gestionadas; Postgres local no lo requiere)
 const useSsl = process.env.DB_SSL === "true";
 
 export const AppDataSource = new DataSource({
@@ -11,8 +11,8 @@ export const AppDataSource = new DataSource({
   host: process.env.DB_HOST || "localhost",
   database: process.env.DB_NAME || "webexams",
   password: process.env.DB_PASS || "",
-  port: parseInt(process.env.DB_PORT || "3306"),
-  username: process.env.DB_USER || "root",
+  port: parseInt(process.env.DB_PORT || "5432"),
+  username: process.env.DB_USER || "postgres",
   synchronize: true,
   logging: false,
   entities: [User],

@@ -388,46 +388,18 @@ export const examsService = {
 
   /**
    * Obtener examen por código (PÚBLICO - para estudiantes)
-   * MEJORADO: Con búsqueda case-insensitive y mejor manejo de errores
    */
   obtenerExamenPorCodigo: async (
     codigo: string,
   ): Promise<ExamenCreado | null> => {
     try {
-      // Limpiar el código de espacios
       const codigoLimpio = codigo.trim();
-
-      // Intentar obtener TODOS los exámenes para hacer búsqueda local
-      // Esto es un workaround si el backend no soporta búsqueda case-insensitive
-      try {
-        // Primero intentar la ruta específica del backend
-        const response = await examsApi.get(`/${codigoLimpio}`);
-
-        if (response.data) {
-          return response.data;
-        }
-      } catch (apiError: any) {
-        // Si falla, intentar obtener todos los exámenes y buscar localmente
-        try {
-          const todosResponse = await examsApi.get("/");
-          const todosExamenes = todosResponse.data;
-
-          const examenEncontrado = todosExamenes.find(
-            (examen: ExamenCreado) =>
-              examen.codigoExamen.toLowerCase() === codigoLimpio.toLowerCase(),
-          );
-
-          if (examenEncontrado) {
-            return examenEncontrado;
-          }
-        } catch (localError) {
-          console.error("❌ [EXAMS] Error en búsqueda local:", localError);
-        }
-      }
-
-      return null;
+      const response = await examsApi.get(`/${codigoLimpio}`);
+      return response.data ?? null;
     } catch (error: any) {
-      console.error("❌ [EXAMS] Error crítico al buscar examen:", error);
+      if (error.response?.status !== 404) {
+        console.error("❌ [EXAMS] Error al buscar examen:", error);
+      }
       return null;
     }
   },

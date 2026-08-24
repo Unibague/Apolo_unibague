@@ -6,7 +6,7 @@ import { ExamAnswer } from "../models/ExamAnswer";
 import { ExamInProgress } from "../models/ExamInProgress";
 import { ExamEvent } from "../models/ExamEvent";
 
-// SSL solo si DB_SSL=true (necesario para algunas BDs gestionadas; MySQL local no lo requiere)
+// SSL solo si DB_SSL=true (necesario para algunas BDs gestionadas; Postgres local no lo requiere)
 const useSsl = process.env.DB_SSL === "true";
 
 export const AppDataSource = new DataSource({
@@ -25,14 +25,10 @@ export const AppDataSource = new DataSource({
       rejectUnauthorized: true,
     },
   }),
-  connectTimeoutMS: 30000,
   extra: {
-    // Mantiene las conexiones del pool vivas para evitar ECONNRESET en TiDB Cloud
-    enableKeepAlive: true,
-    keepAliveInitialDelay: 10000,
-    connectionLimit: 50,
-    connectTimeoutMS: 30000,
-    waitForConnections: true,
-    queueLimit: 0,
+    max: 50,
+    keepAlive: true,
+    keepAliveInitialDelayMillis: 10000,
+    connectionTimeoutMillis: 30000,
   },
 });

@@ -1,4 +1,4 @@
-# Nginx del HOST (proxy + SSL) → reenvía todo al container Docker en 127.0.0.1:8080
+# Nginx del HOST (proxy + SSL) → reenvía todo al container Docker en 127.0.0.1:3090
 #
 # Instalar:
 #   sudo cp deploy/nginx-host.conf.example /etc/nginx/sites-available/webexams
@@ -21,9 +21,9 @@ server {
 
     client_max_body_size 50M;
 
-    # Proxy completo al stack Docker (nginx interno en 127.0.0.1:8080)
+    # Proxy completo al stack Docker (nginx interno en 127.0.0.1:3090)
     location / {
-        proxy_pass http://127.0.0.1:8080;
+        proxy_pass http://127.0.0.1:3090;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;

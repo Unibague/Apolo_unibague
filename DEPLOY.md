@@ -17,7 +17,7 @@ Despliegue del proyecto en un servidor Linux usando **Docker Compose**. Probado 
                        │  Nginx (host)  │  ← maneja SSL con certbot
                        └───────┬────────┘
                                │  proxy_pass
-                               │  127.0.0.1:8080
+                               │  127.0.0.1:3090
             ╭──────────────────┴──────────────────╮
             │       Docker Compose stack          │
             │  ┌────────────────────────────────┐ │
@@ -64,7 +64,7 @@ El frontend usa **rutas relativas** (`/api/users`, `/api/exams`, `/api/exam`). E
 | Entorno | Quién hace el proxy | Configuración |
 |---|---|---|
 | **Desarrollo** (Vite) | `vite.config.ts` → `server.proxy` | `/api/users` → `localhost:3000`, `/api/exams` → `localhost:3001`, `/api/exam` → `localhost:3002` |
-| **Producción** (Docker) | Nginx interno → `docker/nginx/default.conf` | `/api/users/` → `users:3000`, `/api/exams/` → `exams:3001`, `/api/exam/` → `attempts:3002` |
+| **Producción** (Docker) | Nginx interno → `client/nginx.conf` (bakeado en la imagen `apolo-frontend`) | `/api/users/` → `apolo-users:3000`, `/api/exams/` → `apolo-exams:3001`, `/api/exam/` → `apolo-attempts:3002` |
 
 **Regla de nombres importante:** `/api/exams/` (plural) → servicio Exams. `/api/exam/` (singular) → servicio ExamsAttempts.
 
@@ -286,7 +286,7 @@ Después: `make restart`.
 
 ## 5. Nginx del host + SSL
 
-El stack Docker expone el Nginx interno en `127.0.0.1:8080`. El Nginx del host le hace proxy y maneja SSL con certbot.
+El stack Docker expone el Nginx interno en el puerto `3090`. El Nginx del host le hace proxy y maneja SSL con certbot.
 
 ```bash
 # Instalar config
@@ -314,7 +314,7 @@ proxy_set_header Connection "upgrade";
 proxy_read_timeout 86400;
 ```
 
-El Nginx interno (`docker/nginx/default.conf`) tiene un bloque específico para `/socket.io/` que hace proxy al servicio `attempts:3002`. **No necesitas configurar nada extra** para que los WebSockets funcionen.
+El Nginx interno (`client/nginx.conf`, bakeado en la imagen `apolo-frontend` por el `Dockerfile`) tiene un bloque específico para `/socket.io/` que hace proxy al servicio `apolo-attempts:3002`. **No necesitas configurar nada extra** para que los WebSockets funcionen.
 
 ### Firewall
 
@@ -428,7 +428,7 @@ docker compose config   # validar el yaml
 
 ### WebSocket no conecta / examen no muestra en tiempo real
 - Verifica que Nginx del host tiene las cabeceras `Upgrade` y `Connection "upgrade"` (ya vienen en el template)
-- Verifica que Nginx interno tiene el bloque `/socket.io/` apuntando a `attempts`
+- Verifica que Nginx interno (`client/nginx.conf`) tiene el bloque `/socket.io/` apuntando a `apolo-attempts`
 - Logs: `make logs-attempts` — busca mensajes de conexión/desconexión de socket.io
 
 ### Imágenes/PDFs no aparecen tras subir
@@ -489,7 +489,6 @@ WebExams/
 ├── .env                                ← (no versionado) tus secrets reales
 ├── package.json                        ← script `npm run dev` para desarrollo local
 ├── docker/
-│   ├── nginx/default.conf              ← config Nginx INTERNO (proxy a microservicios + socket.io)
 │   └── postgres-init/01-databases.sh   ← crea las BDs de Exams y Attempts al primer arranque
 ├── deploy/
 │   ├── setup-server.sh                 ← instala Docker, Node, Nginx en el server
@@ -515,6 +514,7 @@ WebExams/
 │           └── services/EmailService.ts    ← envío de notas por Resend
 └── client/
     ├── .env                            ← vars VITE_FIREBASE_* (públicas)
+    ├── nginx.conf                      ← config Nginx INTERNO (proxy a microservicios + socket.io), bakeada en la imagen por el Dockerfile
     ├── vite.config.ts                  ← proxy para desarrollo local
     ├── vercel.json                     ← (vestigio) se puede eliminar
     └── dist/                           ← (generado) servido por Nginx

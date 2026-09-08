@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { ExamController } from "../controllers/ExamController";
+import { uploadAnswerFile } from "../middlewares/uploadAnswerFile";
 
 const router = Router();
 
@@ -143,6 +144,77 @@ router.post("/attempt/resume", ExamController.resumeAttempt);
  *               $ref: '#/components/schemas/Error'
  */
 router.post("/answer", ExamController.saveAnswer);
+
+/**
+ * @openapi
+ * /api/exam/attempt/{intento_id}/answer-file:
+ *   post:
+ *     tags:
+ *       - Answers
+ *     summary: Subir un archivo como respuesta (pregunta tipo "Subir archivo")
+ *     description: Sube el archivo entregado por el estudiante para una pregunta de tipo "file_upload" y la guarda como su respuesta (calificación siempre manual).
+ *     parameters:
+ *       - in: path
+ *         name: intento_id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - pregunta_id
+ *               - file
+ *             properties:
+ *               pregunta_id:
+ *                 type: integer
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       201:
+ *         description: Archivo subido y guardado como respuesta
+ *       400:
+ *         description: Datos inválidos, archivo faltante o tipo no permitido
+ *       403:
+ *         description: No se pueden guardar respuestas en este intento
+ *       404:
+ *         description: Intento no encontrado
+ */
+router.post(
+  "/attempt/:intento_id/answer-file",
+  uploadAnswerFile.single("file"),
+  ExamController.uploadAnswerFile,
+);
+
+/**
+ * @openapi
+ * /api/exam/answer-file/{fileName}:
+ *   get:
+ *     tags:
+ *       - Answers
+ *     summary: Descargar/ver el archivo entregado por un estudiante
+ *     parameters:
+ *       - in: path
+ *         name: fileName
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: name
+ *         schema:
+ *           type: string
+ *         description: Nombre original con el que se debe descargar el archivo
+ *     responses:
+ *       200:
+ *         description: Archivo retornado (stream del archivo local)
+ *       404:
+ *         description: Archivo no encontrado
+ */
+router.get("/answer-file/:fileName", ExamController.getAnswerFile);
 
 /**
  * @openapi

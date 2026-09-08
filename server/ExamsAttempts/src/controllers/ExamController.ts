@@ -8,6 +8,8 @@ import { StartExamAttemptDto } from "../dtos/Start-ExamAttempt.dto";
 import { ResumeExamAttemptDto } from "../dtos/Resume-ExamAttempt.dto";
 import { UpdateManualGradeDto } from "../dtos/Update-ManualGrade.dto";
 import { UpdatePDFGradeDto } from "../dtos/Update-PDFGrade.dto";
+import { TipoRespuesta } from "../models/ExamAnswer";
+import { answerFileService } from "../services/AnswerFileService";
 
 export class ExamController {
   static async startAttempt(req: Request, res: Response, next: NextFunction) {
@@ -601,6 +603,79 @@ export class ExamController {
       }
 
       res.status(200).json({ message: "Notificación enviada" });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  static async uploadAnswerFile(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No se proporcionó ningún archivo" });
+      }
+
+      const intento_id = Number(req.params.intento_id);
+      const pregunta_id = Number(req.body.pregunta_id);
+
+      if (!intento_id || !pregunta_id) {
+        return res
+          .status(400)
+          .json({ message: "Falta intento_id o pregunta_id" });
+      }
+
+      const fileInfo = await answerFileService.saveAnswerFile(req.file);
+
+      const payload = {
+        pregunta_id,
+        intento_id,
+        respuesta: JSON.stringify(fileInfo.fileName),
+        fecha_respuesta: new Date(),
+        tipo_respuesta: TipoRespuesta.ARCHIVO,
+        metadata_codigo: JSON.stringify({
+          originalName: fileInfo.originalName,
+          mimeType: fileInfo.mimeType,
+          size: fileInfo.size,
+        }),
+      };
+
+      const errors = await validateDTO(CreateExamAnswerDto, payload);
+      if (errors.length) throwValidationErrors(errors);
+
+      const result = await ExamService.saveAnswer(
+        payload as CreateExamAnswerDto,
+        req.app.get("io"),
+      );
+
+      res.status(201).json({
+        message: "Archivo subido exitosamente",
+        fileName: fileInfo.fileName,
+        originalName: fileInfo.originalName,
+        mimeType: fileInfo.mimeType,
+        size: fileInfo.size,
+        answer: result,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  static async getAnswerFile(req: Request, res: Response, next: NextFunction) {
+    try {
+      const fileName = String(req.params.fileName);
+      const filePath = await answerFileService.resolveAnswerFilePath(fileName);
+      if (!filePath) {
+        return res.status(404).json({ message: "Archivo no encontrado" });
+      }
+
+      const originalName = typeof req.query.name === "string" ? req.query.name : undefined;
+      if (originalName) {
+        return res.download(filePath, originalName);
+      }
+      return res.sendFile(filePath);
     } catch (err) {
       next(err);
     }

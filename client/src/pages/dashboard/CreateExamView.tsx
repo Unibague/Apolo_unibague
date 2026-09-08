@@ -31,6 +31,7 @@ function mapearPreguntaBackendAFrontend(p: any): any {
     open: "abierta",
     fill_blanks: "rellenar-espacios",
     match: "conectar",
+    file_upload: "subir-archivo",
   };
 
   const base = {

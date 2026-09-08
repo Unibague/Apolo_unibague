@@ -209,6 +209,26 @@ export class QuestionResponseBuilder {
           }
           break;
         }
+
+        case "file_upload": {
+          if (respuestaEstudiante && respuestaParsed) {
+            let metadataParsed: any = null;
+            if (respuestaEstudiante.metadata_codigo) {
+              try {
+                metadataParsed = JSON.parse(respuestaEstudiante.metadata_codigo);
+              } catch {
+                metadataParsed = null;
+              }
+            }
+            preguntaDetalle.respuestaEstudiante.archivo = {
+              nombreArchivo: respuestaParsed,
+              nombreOriginal: metadataParsed?.originalName ?? null,
+              mimeType: metadataParsed?.mimeType ?? null,
+              tamano: metadataParsed?.size ?? null,
+            };
+          }
+          break;
+        }
       }
 
       return preguntaDetalle;
@@ -248,7 +268,7 @@ export class QuestionResponseBuilder {
     totalPreguntas: number,
     preguntasConRespuestas: any[],
   ): any {
-    const preguntasRespondidas = attempt.respuestas?.filter(r => r.tipo_respuesta === TipoRespuesta.NORMAL).length || 0;
+    const preguntasRespondidas = attempt.respuestas?.filter(r => r.tipo_respuesta === TipoRespuesta.NORMAL || r.tipo_respuesta === TipoRespuesta.ARCHIVO).length || 0;
     const preguntasCorrectas = preguntasConRespuestas.filter(
       (p: any) =>
         p.respuestaEstudiante &&

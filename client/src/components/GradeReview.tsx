@@ -102,7 +102,7 @@ interface AttemptDetails {
 interface Pregunta {
   id: number;
   enunciado: string;
-  type: "test" | "open" | "fill_blanks" | "match";
+  type: "test" | "open" | "fill_blanks" | "match" | "file_upload";
   puntajeMaximo: number;
   calificacionParcial: boolean;
   nombreImagen?: string;
@@ -116,6 +116,7 @@ interface Pregunta {
     textoEscrito?: string;
     espaciosLlenados?: { posicion: number; respuestaEstudiante: string; respuestaCorrecta: string; esCorrecta: boolean }[];
     paresSeleccionados?: { itemA: { id: number; text: string }; itemB: { id: number; text: string }; esCorrecto: boolean }[];
+    archivo?: { nombreArchivo: string; nombreOriginal: string | null; mimeType: string | null; tamano: number | null };
   } | null;
   opciones?: { id: number; texto: string; esCorrecta?: boolean }[];
   cantidadRespuestasCorrectas?: number;
@@ -129,6 +130,7 @@ interface Pregunta {
 type SaveStatus = "idle" | "saving" | "saved" | "error";
 
 const EXAMS_API_URL = import.meta.env.VITE_EXAMS_URL || window.location.origin;
+const ATTEMPTS_API_URL = import.meta.env.VITE_SOCKET_URL || window.location.origin;
 
 // ============================================
 // COMPONENTE PRINCIPAL
@@ -868,7 +870,7 @@ export default function RevisarCalificacion({
                           />
                           <div className="flex items-center gap-3 mt-2">
                             <span className={`inline-block text-xs font-semibold px-3 py-1 rounded-full ${darkMode ? "bg-slate-700/60 text-slate-400" : "bg-gray-100 text-slate-500"}`}>
-                              {pregunta.type === "test" ? "Selección Múltiple" : pregunta.type === "open" ? "Pregunta Abierta" : pregunta.type === "match" ? "Emparejamiento" : "Completar"}
+                              {pregunta.type === "test" ? "Selección Múltiple" : pregunta.type === "open" ? "Pregunta Abierta" : pregunta.type === "match" ? "Emparejamiento" : pregunta.type === "file_upload" ? "Subir archivo" : "Completar"}
                             </span>
                           </div>
                         </div>
@@ -940,6 +942,7 @@ export default function RevisarCalificacion({
                         {pregunta.type === "open" && <RenderOpen pregunta={pregunta} darkMode={darkMode} />}
                         {pregunta.type === "fill_blanks" && <RenderFillBlanks pregunta={pregunta} darkMode={darkMode} />}
                         {pregunta.type === "match" && <RenderMatch pregunta={pregunta} darkMode={darkMode} />}
+                        {pregunta.type === "file_upload" && <RenderFileUpload pregunta={pregunta} darkMode={darkMode} />}
                       </div>
                     </div>
 
@@ -1618,6 +1621,50 @@ function RenderOpen({ pregunta, darkMode }: { pregunta: Pregunta; darkMode: bool
           </p>
         </div>
       )}
+    </div>
+  );
+}
+
+function RenderFileUpload({ pregunta, darkMode }: { pregunta: Pregunta; darkMode: boolean }) {
+  const archivo = pregunta.respuestaEstudiante?.archivo;
+
+  if (!archivo) {
+    return (
+      <div className={`w-full p-4 rounded-xl border-2 ${darkMode ? "bg-slate-800/70 border-slate-700 text-slate-400" : "bg-gray-50 border-gray-200 text-slate-500"}`}>
+        <p className="italic text-sm">El estudiante no entregó ningún archivo.</p>
+      </div>
+    );
+  }
+
+  const displayName = archivo.nombreOriginal || archivo.nombreArchivo;
+  const downloadUrl = `${ATTEMPTS_API_URL}/api/exam/answer-file/${archivo.nombreArchivo}${
+    archivo.nombreOriginal ? `?name=${encodeURIComponent(archivo.nombreOriginal)}` : ""
+  }`;
+  const tamanoKB = archivo.tamano ? Math.round(archivo.tamano / 1024) : null;
+
+  return (
+    <div className={`flex items-center justify-between gap-3 p-4 rounded-xl border-2 ${darkMode ? "bg-emerald-500/10 border-emerald-700/60" : "bg-emerald-50 border-emerald-200"}`}>
+      <div className="flex items-center gap-3 min-w-0">
+        <FileText className={`w-6 h-6 shrink-0 ${darkMode ? "text-emerald-400" : "text-emerald-600"}`} />
+        <div className="min-w-0">
+          <p className={`truncate text-sm font-medium ${darkMode ? "text-emerald-300" : "text-emerald-700"}`}>
+            {displayName}
+          </p>
+          {tamanoKB !== null && (
+            <p className={`text-xs ${darkMode ? "text-emerald-500/70" : "text-emerald-600/70"}`}>
+              {tamanoKB >= 1024 ? `${(tamanoKB / 1024).toFixed(1)} MB` : `${tamanoKB} KB`}
+            </p>
+          )}
+        </div>
+      </div>
+      <a
+        href={downloadUrl}
+        target="_blank"
+        rel="noreferrer"
+        className={`text-sm font-semibold px-3 py-1.5 rounded-lg shrink-0 transition-colors ${darkMode ? "bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30" : "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"}`}
+      >
+        Descargar
+      </a>
     </div>
   );
 }

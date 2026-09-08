@@ -17,6 +17,7 @@ import { TestQuestionDto } from "./add-test-question.dto";
 import { OpenQuestionDto } from "./add-open-question.dto";
 import { FillBlankQuestionDto } from "./add-blank-question.dto";
 import { MatchingQuestionDto } from "./add-matching-question.dto";
+import { FileUploadQuestionDto } from "./add-file-upload-question.dto";
 
 export class UpdateExamDto {
   // ❌ NO se puede cambiar el ID del examen (viene en params)
@@ -133,6 +134,7 @@ export class UpdateExamDto {
         { value: OpenQuestionDto, name: "open" },
         { value: FillBlankQuestionDto, name: "fill_blanks" },
         { value: MatchingQuestionDto, name: "matching" },
+        { value: FileUploadQuestionDto, name: "file_upload" },
       ],
     },
   })

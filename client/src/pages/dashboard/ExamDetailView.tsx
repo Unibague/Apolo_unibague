@@ -59,10 +59,10 @@ export default function VerExamen({ darkMode }: VerExamenProps) {
         // Detectar formato: backend usa p.type (inglés), creación usa p.tipo (español)
         const isBackendFormat = p.type !== undefined;
 
-        let type: "open" | "test" | "fill_blanks" | "match" = "open";
+        let type: "open" | "test" | "fill_blanks" | "match" | "file_upload" = "open";
 
         if (isBackendFormat) {
-          // Formato backend: type ya es el valor correcto ("test","fill_blanks","match","open")
+          // Formato backend: type ya es el valor correcto ("test","fill_blanks","match","open","file_upload")
           type = p.type;
         } else {
           // Formato creación: mapear tipo español al tipo inglés
@@ -70,6 +70,7 @@ export default function VerExamen({ darkMode }: VerExamenProps) {
           else if (p.tipo === "rellenar-espacios") type = "fill_blanks";
           else if (p.tipo === "conectar") type = "match";
           else if (p.tipo === "abierta") type = "open";
+          else if (p.tipo === "subir-archivo") type = "file_upload";
         }
 
         // textoCorrecto: backend lo tiene como campo directo; creación lo construye

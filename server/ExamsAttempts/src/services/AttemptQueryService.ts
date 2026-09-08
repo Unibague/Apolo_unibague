@@ -118,7 +118,7 @@ export class AttemptQueryService {
       ),
       preguntas: preguntasConRespuestas,
       ...((() => {
-        const herramientas = (attempt.respuestas || []).filter(r => r.tipo_respuesta !== TipoRespuesta.NORMAL);
+        const herramientas = (attempt.respuestas || []).filter(r => r.tipo_respuesta !== TipoRespuesta.NORMAL && r.tipo_respuesta !== TipoRespuesta.ARCHIVO);
         return herramientas.length > 0 ? { respuestasPDF: QuestionResponseBuilder.buildPDFResponses(herramientas) } : {};
       })()),
       eventos: eventosFormatted,
@@ -218,7 +218,7 @@ export class AttemptQueryService {
       ),
       preguntas: preguntasConRespuestas,
       ...((() => {
-        const herramientas = (attempt.respuestas || []).filter(r => r.tipo_respuesta !== TipoRespuesta.NORMAL);
+        const herramientas = (attempt.respuestas || []).filter(r => r.tipo_respuesta !== TipoRespuesta.NORMAL && r.tipo_respuesta !== TipoRespuesta.ARCHIVO);
         return herramientas.length > 0 ? { respuestasPDF: QuestionResponseBuilder.buildPDFResponses(herramientas) } : {};
       })()),
     };

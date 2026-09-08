@@ -202,6 +202,13 @@ function mapearPreguntasConImagenes(preguntas: Pregunta[], incluirIds = false) {
         };
         break;
 
+      case "subir-archivo":
+        preguntaMapeada = {
+          ...base,
+          type: "file_upload",
+        };
+        break;
+
       default:
         throw new Error(
           `Tipo de pregunta no soportado: ${(pregunta as any).tipo}`,

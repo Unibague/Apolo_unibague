@@ -5,6 +5,7 @@ export enum QuestionType {
   OPEN = "open",
   FILL_BLANKS = "fill_blanks",
   MATCHING = "matching",
+  FILE_UPLOAD = "file_upload",
 }
 
 interface base_question_dto {

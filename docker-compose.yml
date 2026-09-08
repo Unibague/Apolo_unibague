@@ -124,8 +124,11 @@ services:
       CORS_ORIGIN: ${FRONTEND_URL}
       RESEND_API_KEY: ${RESEND_API_KEY}
       SMTP_FROM: ${SMTP_FROM}
+      UPLOADS_DIR: /app/uploads
     ports:
       - "3102:3002"
+    volumes:
+      - apolo_attempts_uploads_data:/app/uploads
     networks:
       - apolo-network
 
@@ -140,4 +143,6 @@ volumes:
   apolo_postgres_data:
     driver: local
   apolo_uploads_data:
+    driver: local
+  apolo_attempts_uploads_data:
     driver: local

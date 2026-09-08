@@ -124,4 +124,24 @@ export const examsAttemptsService = {
     const response = await examsAttemptsApi.get(`/attempt/feedback/${codigoRevision}`);
     return response.data;
   },
+
+  async uploadAnswerFile(
+    intentoId: number,
+    preguntaId: number,
+    file: File,
+  ): Promise<{ fileName: string; originalName: string; mimeType: string; size: number }> {
+    const formData = new FormData();
+    formData.append("pregunta_id", String(preguntaId));
+    formData.append("file", file);
+    // La instancia fuerza Content-Type: application/json por defecto, lo que
+    // haría que axios serialice el FormData como JSON. Se limpia aquí para
+    // que el navegador genere el boundary multipart/form-data automáticamente.
+    // Timeout ampliado por el tamaño del archivo (hasta 20MB).
+    const response = await examsAttemptsApi.post(
+      `/attempt/${intentoId}/answer-file`,
+      formData,
+      { headers: { "Content-Type": undefined }, timeout: 60000 },
+    );
+    return response.data;
+  },
 };

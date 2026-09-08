@@ -7,6 +7,7 @@ import { MatchPair } from "../models/MatchPair";
 import { MatchQuestion } from "../models/MatchQuestion";
 import { OpenQuestion } from "../models/OpenQuestion";
 import { OpenQuestionKeyword } from "../models/OpenQuestionKeyWord";
+import { FileUploadQuestion } from "../models/FileUploadQuestion";
 import { Question } from "../models/Question";
 import { throwHttpError } from "../utils/errors";
 
@@ -215,6 +216,14 @@ export class QuestionValidator {
           );
 
           return matchQ;
+
+        case "file_upload":
+          const fileUploadQ = new FileUploadQuestion();
+          Object.assign(fileUploadQ, preguntaBaseData);
+
+          fileUploadQ.nombreImagen = questionDto.nombreImagen ?? null;
+
+          return fileUploadQ;
 
         default:
           throwHttpError(

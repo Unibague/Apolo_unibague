@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Trash2, Copy, Image as ImageIcon, X, Check, ChevronDown, AlertCircle, HelpCircle, ChevronUp, Pencil, GripVertical } from 'lucide-react';
+import { Plus, Trash2, Copy, Image as ImageIcon, X, Check, ChevronDown, AlertCircle, HelpCircle, ChevronUp, Pencil, GripVertical, Upload } from 'lucide-react';
 import EditorTexto from './TextEditor';
 
 interface CrearPreguntasProps {
@@ -9,7 +9,7 @@ interface CrearPreguntasProps {
   onValidationChange?: (isValid: boolean) => void;
 }
 
-type TipoPregunta = 'seleccion-multiple' | 'rellenar-espacios' | 'conectar' | 'abierta';
+type TipoPregunta = 'seleccion-multiple' | 'rellenar-espacios' | 'conectar' | 'abierta' | 'subir-archivo';
 type MetodoEvaluacionAbierta = 'palabras-clave' | 'texto-exacto' | 'manual';
 
 interface OpcionSeleccion {
@@ -104,8 +104,11 @@ export default function CrearPreguntas({ darkMode, preguntasIniciales = [], onPr
           return pregunta.palabrasSeleccionadas && pregunta.palabrasSeleccionadas.length > 0;
         }
         if (pregunta.tipo === 'conectar') {
-          return pregunta.paresConexion && pregunta.paresConexion.length > 0 && 
+          return pregunta.paresConexion && pregunta.paresConexion.length > 0 &&
                  pregunta.paresConexion.every(p => p.izquierda && p.derecha);
+        }
+        if (pregunta.tipo === 'subir-archivo') {
+          return true;
         }
         return false;
       });
@@ -203,6 +206,9 @@ export default function CrearPreguntas({ darkMode, preguntasIniciales = [], onPr
         cambios.metodoEvaluacion = 'manual';
         cambios.palabrasClave = [];
         cambios.textoExacto = '';
+        cambios.calificacionParcial = false;
+        break;
+      case 'subir-archivo':
         cambios.calificacionParcial = false;
         break;
     }
@@ -425,7 +431,8 @@ export default function CrearPreguntas({ darkMode, preguntasIniciales = [], onPr
     { tipo: 'seleccion-multiple' as TipoPregunta, nombre: 'Opción múltiple', icono: '◉' },
     { tipo: 'rellenar-espacios' as TipoPregunta, nombre: 'Rellenar espacios', icono: '_' },
     { tipo: 'conectar' as TipoPregunta, nombre: 'Conectar', icono: '⟷' },
-    { tipo: 'abierta' as TipoPregunta, nombre: 'Párrafo', icono: '≡' }
+    { tipo: 'abierta' as TipoPregunta, nombre: 'Párrafo', icono: '≡' },
+    { tipo: 'subir-archivo' as TipoPregunta, nombre: 'Subir archivo', icono: '📎' }
   ];
 
   const renderizarPreguntaEdicion = (pregunta: Pregunta, index: number) => {
@@ -958,11 +965,33 @@ export default function CrearPreguntas({ darkMode, preguntasIniciales = [], onPr
               {pregunta.metodoEvaluacion === 'manual' && (
                 <div className="p-4 rounded-lg border bg-raised border-ui">
                   <p className="text-sm text-secondary">
-                    Esta pregunta será calificada manualmente por el profesor. 
+                    Esta pregunta será calificada manualmente por el profesor.
                     No se requiere configuración de respuesta correcta.
                   </p>
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {pregunta.tipo === 'subir-archivo' && (
+          <div className="mb-4">
+            <div className="p-4 rounded-lg border bg-raised border-ui">
+              <div className="flex items-start gap-3">
+                <Upload className="w-5 h-5 mt-0.5 shrink-0 text-action" />
+                <div className="space-y-1">
+                  <p className="text-sm text-secondary">
+                    El estudiante deberá subir un archivo como respuesta. Esta pregunta siempre se
+                    califica <span className="font-medium">manualmente</span>: revisarás el archivo
+                    entregado y le asignarás el puntaje y la retroalimentación desde la vista de
+                    calificación.
+                  </p>
+                  <p className="text-sm text-muted">
+                    Formatos aceptados: PDF, Word, Excel, PowerPoint, texto, CSV, imágenes y
+                    comprimidos (ZIP/RAR/7z). Tamaño máximo por archivo: 20 MB.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -1261,8 +1290,11 @@ export default function CrearPreguntas({ darkMode, preguntasIniciales = [], onPr
         return pregunta.palabrasSeleccionadas && pregunta.palabrasSeleccionadas.length > 0;
       }
       if (pregunta.tipo === 'conectar') {
-        return pregunta.paresConexion && pregunta.paresConexion.length > 0 && 
+        return pregunta.paresConexion && pregunta.paresConexion.length > 0 &&
                pregunta.paresConexion.every(p => p.izquierda && p.derecha);
+      }
+      if (pregunta.tipo === 'subir-archivo') {
+        return true;
       }
       return false;
     };
@@ -1452,6 +1484,20 @@ export default function CrearPreguntas({ darkMode, preguntasIniciales = [], onPr
                     </span>
                   </div>
                 )}
+              </div>
+            )}
+
+            {pregunta.tipo === 'subir-archivo' && (
+              <div className="flex flex-col gap-3">
+                <div className={`w-full min-h-[140px] p-4 rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-2 text-center border-ui ${darkMode ? "bg-slate-800/70 text-slate-400" : "bg-gray-50 text-gray-500"}`}>
+                  <Upload className="w-8 h-8" />
+                  <span className="text-sm">El estudiante subirá aquí su archivo de respuesta</span>
+                </div>
+                <div className="flex justify-end">
+                  <span className={`text-sm px-3 py-1.5 rounded-full border ${darkMode ? "bg-blue-900/30 text-blue-400 border-blue-700" : "bg-blue-100 text-blue-700 border-blue-300"}`}>
+                    Evaluación manual
+                  </span>
+                </div>
               </div>
             )}
           </div>

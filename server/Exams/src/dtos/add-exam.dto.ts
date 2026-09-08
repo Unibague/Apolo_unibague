@@ -19,6 +19,7 @@ import { TestQuestionDto } from "./add-test-question.dto";
 import { OpenQuestionDto } from "./add-open-question.dto";
 import { FillBlankQuestionDto } from "./add-blank-question.dto";
 import { MatchingQuestionDto } from "./add-matching-question.dto";
+import { FileUploadQuestionDto } from "./add-file-upload-question.dto";
 
 export class add_exam_dto {
   @IsString({ message: "Nombre debe ser string" })
@@ -156,6 +157,7 @@ export class add_exam_dto {
         { value: OpenQuestionDto, name: "open" },
         { value: FillBlankQuestionDto, name: "fill_blanks" },
         { value: MatchingQuestionDto, name: "matching" },
+        { value: FileUploadQuestionDto, name: "file_upload" },
       ],
     },
   })

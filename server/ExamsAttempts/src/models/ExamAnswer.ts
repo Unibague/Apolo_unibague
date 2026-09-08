@@ -15,6 +15,7 @@ export enum TipoRespuesta {
   JAVASCRIPT = "javascript",
   DIAGRAMA = "diagrama",
   HOJA_CALCULO = "hoja_calculo",
+  ARCHIVO = "archivo",
   SIN_RESPUESTA = "sin_respuesta",
 }
 

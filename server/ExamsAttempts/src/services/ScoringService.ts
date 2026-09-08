@@ -71,6 +71,11 @@ export class ScoringService {
             );
             break;
 
+          case "file_upload":
+            // Se califica siempre de forma manual por el profesor
+            puntajePregunta = 0;
+            break;
+
           default:
             console.warn(
               `    ⚠️ Tipo de pregunta desconocido: ${question.type}`,

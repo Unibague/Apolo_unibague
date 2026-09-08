@@ -465,12 +465,21 @@ export async function generateExamPDF(
     y += 2;
 
     // Manual grading note
-    if (q.type === "open" && (!q.keywords || q.keywords.length === 0) && !q.textoRespuesta) {
+    if (
+      (q.type === "open" && (!q.keywords || q.keywords.length === 0) && !q.textoRespuesta) ||
+      q.type === "file_upload"
+    ) {
       y = checkBreak(doc, y, 5);
       doc.setFont("helvetica", "italic");
       doc.setFontSize(8);
       doc.setTextColor(...GRAY_60);
-      doc.text("Calificacion manual por el profesor", MARGIN + 10, y);
+      doc.text(
+        q.type === "file_upload"
+          ? "El estudiante debe subir un archivo desde la plataforma. Calificacion manual por el profesor"
+          : "Calificacion manual por el profesor",
+        MARGIN + 10,
+        y,
+      );
       y += 5.5;
     }
 

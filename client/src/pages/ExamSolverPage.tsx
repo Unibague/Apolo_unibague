@@ -2277,6 +2277,7 @@ export default function SecureExamPlatform() {
               timeLimitRemoved={timeLimitRemoved}
               initialQuestionIndex={initialQuestionIndex}
               onQuestionIndexChange={setInitialQuestionIndex}
+              attemptId={studentData?.attemptId}
             />
           </div>
         );

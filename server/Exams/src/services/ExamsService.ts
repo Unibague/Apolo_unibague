@@ -146,7 +146,7 @@ export class ExamService {
 
         // Actualizar flag tienePreguntasAbiertas
         const tienePreguntasAbiertas = preguntas_guardadas.some(
-          (q: any) => q.type === "open",
+          (q: any) => q.type === "open" || q.type === "file_upload",
         );
         examen_guardado.tienePreguntasAbiertas = tienePreguntasAbiertas;
         await manager.save(Exam, examen_guardado);
@@ -325,7 +325,7 @@ export class ExamService {
 
         // Actualizar flag tienePreguntasAbiertas basado en las preguntas guardadas
         const tienePreguntasAbiertas = preguntasGuardadas.some(
-          (q: any) => q.type === "open",
+          (q: any) => q.type === "open" || q.type === "file_upload",
         );
         existingExam.tienePreguntasAbiertas = tienePreguntasAbiertas;
       }

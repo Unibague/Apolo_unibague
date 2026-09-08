@@ -10,6 +10,7 @@ import { BlankAnswer } from "../models/FillBlankAnswer";
 import { FillBlankQuestion } from "../models/FillBlankQuestion";
 
 import { OpenQuestion } from "../models/OpenQuestion";
+import { FileUploadQuestion } from "../models/FileUploadQuestion";
 
 import { MatchQuestion } from "../models/MatchQuestion";
 
@@ -36,6 +37,7 @@ export const AppDataSource = new DataSource({
     Question,
     TestQuestion,
     OpenQuestion,
+    FileUploadQuestion,
     FillBlankQuestion,
     MatchQuestion,
     TestOption,

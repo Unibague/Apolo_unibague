@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { ChevronRight, ChevronLeft, CheckCircle2, ZoomIn, ZoomOut } from "lucide-react";
+import { ChevronRight, ChevronLeft, CheckCircle2, ZoomIn, ZoomOut, Upload, Paperclip } from "lucide-react";
 import * as pdfjsLib from "pdfjs-dist";
 import { buildPdfViewUrl, QUESTION_COLORS, PAIR_COLORS, getStableColor } from "../utils/examUtils";
+import { examsAttemptsService } from "../services/examsAttempts";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.min.mjs",
@@ -14,7 +15,7 @@ interface Question {
   enunciado: string;
   puntaje: number;
   nombreImagen?: string;
-  type: "open" | "test" | "fill_blanks" | "match";
+  type: "open" | "test" | "fill_blanks" | "match" | "file_upload";
   options?: Array<{ id: number; texto: string }>;
   textoCorrecto?: string;
   pares?: Array<{
@@ -47,9 +48,11 @@ interface ExamPanelProps {
   timeLimitRemoved?: boolean;
   initialQuestionIndex?: number;
   onQuestionIndexChange?: (index: number) => void;
+  attemptId?: number;
 }
 
 const EXAMS_API_URL = import.meta.env.VITE_EXAMS_URL || window.location.origin;
+const ATTEMPTS_API_URL = import.meta.env.VITE_SOCKET_URL || window.location.origin;
 
 
 // --- VISOR PDF PARA MÓVIL (canvas inline, sin abrir pestaña) ---
@@ -191,6 +194,7 @@ export default function ExamPanel({
   timeLimitRemoved = false,
   initialQuestionIndex,
   onQuestionIndexChange,
+  attemptId,
 }: ExamPanelProps) {
   const [currentIndex, setCurrentIndex] = useState(() => {
     const init = initialQuestionIndex ?? 0;
@@ -492,6 +496,7 @@ export default function ExamPanel({
                       onAnswerChange={onAnswerChange}
                       darkMode={darkMode}
                       readOnly={readOnly}
+                      attemptId={attemptId}
                     />
                   </div>
                 )}
@@ -616,6 +621,7 @@ export default function ExamPanel({
                     onAnswerChange={onAnswerChange}
                     darkMode={darkMode}
                     readOnly={readOnly}
+                    attemptId={attemptId}
                   />
                 ))}
               </div>
@@ -642,6 +648,7 @@ function QuestionCard({
   onAnswerChange,
   darkMode,
   readOnly,
+  attemptId,
 }: {
   question: Question;
   index: number;
@@ -649,6 +656,7 @@ function QuestionCard({
   onAnswerChange: (id: number, val: any, delay?: number) => void;
   darkMode: boolean;
   readOnly?: boolean;
+  attemptId?: number;
 }) {
   // Seleccionamos un color basado en el índice de la pregunta
   const barColor = getStableColor(question.id, QUESTION_COLORS);
@@ -724,6 +732,9 @@ function QuestionCard({
           {question.type === "match" && (
             <MatchQuestion question={question} answer={answer} onChange={onAnswerChange} darkMode={darkMode} readOnly={readOnly} />
           )}
+          {question.type === "file_upload" && (
+            <FileUploadQuestion question={question} answer={answer} onChange={onAnswerChange} darkMode={darkMode} readOnly={readOnly} attemptId={attemptId} />
+          )}
         </div>
       </div>
     </div>
@@ -763,6 +774,86 @@ function OpenQuestion({ question, answer, onChange, darkMode, readOnly }: any) {
           {currentLength}/{maxLength}
         </span>
       </div>
+    </div>
+  );
+}
+
+// 1.b Pregunta de subir archivo (siempre calificada manualmente)
+function FileUploadQuestion({ question, answer, onChange, darkMode, readOnly, attemptId }: any) {
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [uploadedName, setUploadedName] = useState<string | null>(null);
+
+  const hasFile = typeof answer === "string" && answer.trim().length > 0;
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!attemptId) {
+      setError("No se pudo identificar el intento actual. Recarga la página.");
+      return;
+    }
+
+    setError(null);
+    setUploading(true);
+    try {
+      const result = await examsAttemptsService.uploadAnswerFile(attemptId, question.id, file);
+      setUploadedName(result.originalName || file.name);
+      onChange(question.id, result.fileName, 0);
+    } catch (err: any) {
+      const backendMessage = err?.response?.data?.message;
+      setError(backendMessage || "No se pudo subir el archivo. Intenta de nuevo.");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const downloadUrl = hasFile
+    ? `${ATTEMPTS_API_URL}/api/exam/answer-file/${answer}${uploadedName ? `?name=${encodeURIComponent(uploadedName)}` : ""}`
+    : null;
+
+  return (
+    <div className="space-y-3">
+      {hasFile && (
+        <div className={`flex items-center justify-between gap-3 p-4 rounded-xl border-2 ${darkMode ? "bg-emerald-500/10 border-emerald-700/60" : "bg-emerald-50 border-emerald-200"}`}>
+          <div className="flex items-center gap-3 min-w-0">
+            <Paperclip className={`w-5 h-5 shrink-0 ${darkMode ? "text-emerald-400" : "text-emerald-600"}`} />
+            <span className={`truncate text-sm font-medium ${darkMode ? "text-emerald-300" : "text-emerald-700"}`}>
+              {uploadedName || "Archivo entregado"}
+            </span>
+          </div>
+          <a
+            href={downloadUrl!}
+            target="_blank"
+            rel="noreferrer"
+            className={`text-sm font-medium underline shrink-0 ${darkMode ? "text-emerald-300" : "text-emerald-700"}`}
+          >
+            Ver
+          </a>
+        </div>
+      )}
+
+      {!readOnly && (
+        <label
+          className={`flex flex-col items-center justify-center gap-2 p-6 rounded-xl border-2 border-dashed cursor-pointer transition-all ${
+            uploading ? "opacity-60 cursor-wait" : ""
+          } ${darkMode ? "border-slate-600 hover:border-blue-500 bg-slate-800/40" : "border-gray-300 hover:border-blue-400 bg-gray-50"}`}
+        >
+          <Upload className={`w-6 h-6 ${darkMode ? "text-slate-400" : "text-gray-400"}`} />
+          <span className={`text-sm font-medium ${darkMode ? "text-slate-200" : "text-slate-700"}`}>
+            {uploading ? "Subiendo archivo..." : hasFile ? "Reemplazar archivo" : "Seleccionar archivo"}
+          </span>
+          <span className={`text-xs text-center ${darkMode ? "text-slate-500" : "text-gray-400"}`}>
+            PDF, Word, Excel, PowerPoint, texto, imágenes o comprimidos — máx. 20MB
+          </span>
+          <input type="file" className="hidden" disabled={uploading} onChange={handleFileSelect} />
+        </label>
+      )}
+
+      {error && (
+        <p className={`text-sm ${darkMode ? "text-red-400" : "text-red-600"}`}>{error}</p>
+      )}
     </div>
   );
 }

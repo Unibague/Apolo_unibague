@@ -865,7 +865,7 @@ export default function RevisarCalificacion({
                         </div>
 
                         <div className="flex-1 min-w-0">
-                          <h3 className={`text-base sm:text-xl md:text-2xl font-medium font-serif leading-snug break-words ${darkMode ? "text-gray-100" : "text-gray-900"}`}
+                          <h3 className={`rich-text-content text-base sm:text-xl md:text-2xl font-medium font-serif leading-snug break-words ${darkMode ? "text-gray-100" : "text-gray-900"}`}
                             dangerouslySetInnerHTML={{ __html: pregunta.enunciado }}
                           />
                           <div className="flex items-center gap-3 mt-2">

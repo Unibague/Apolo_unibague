@@ -183,4 +183,22 @@ button, [role="button"], label[for], select, a {
 /* Variantes con delay */
 .anim-delay-1 { animation-delay: 60ms; }
 .anim-delay-2 { animation-delay: 120ms; }
+
+/* ============================================================
+   Enunciados de pregunta: el contenido viene de un editor de texto
+   enriquecido (dangerouslySetInnerHTML) y puede traer palabras muy
+   largas sin espacios (nombres de archivo, URLs) o estilos en línea
+   (ej. al pegar texto con formato de código) que impiden el salto de
+   línea normal. Se fuerza con !important porque un estilo inline del
+   contenido pegado tiene más especificidad que una clase de Tailwind.
+   ============================================================ */
+.rich-text-content,
+.rich-text-content * {
+  white-space: normal !important;
+  overflow-wrap: break-word !important;
+  word-break: break-word !important;
+}
+.rich-text-content {
+  max-width: 100%;
+}
 .anim-delay-3 { animation-delay: 180ms; }

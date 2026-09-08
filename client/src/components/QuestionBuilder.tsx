@@ -1358,7 +1358,7 @@ export default function CrearPreguntas({ darkMode, preguntasIniciales = [], onPr
             </span>
             <div className="flex-1 min-w-0">
               <div
-                className={`text-xl font-medium font-serif leading-snug text-primary prose prose-sm max-w-none break-words ${darkMode ? "prose-invert" : ""}`}
+                className={`rich-text-content text-xl font-medium font-serif leading-snug text-primary prose prose-sm max-w-none break-words ${darkMode ? "prose-invert" : ""}`}
                 dangerouslySetInnerHTML={{ __html: pregunta.titulo || '<span class="opacity-50">Pregunta sin título</span>' }}
               />
               

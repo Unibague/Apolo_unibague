@@ -875,7 +875,7 @@ function FileUploadQuestion({ question, answer, onChange, darkMode, readOnly, at
             {uploading ? "Subiendo archivo..." : hasFile ? "Reemplazar archivo" : "Seleccionar archivo"}
           </span>
           <span className={`text-xs text-center ${darkMode ? "text-slate-500" : "text-gray-400"}`}>
-            PDF, Word, Excel, PowerPoint, texto, imágenes o comprimidos — máx. 20MB
+            PDF, Word, Excel, PowerPoint, texto, imágenes, comprimidos o código/notebooks (ipynb, py, js...) — máx. 20MB
           </span>
           <input
             type="file"

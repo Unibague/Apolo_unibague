@@ -987,8 +987,10 @@ export default function CrearPreguntas({ darkMode, preguntasIniciales = [], onPr
                     calificación.
                   </p>
                   <p className="text-sm text-muted">
-                    Formatos aceptados: PDF, Word, Excel, PowerPoint, texto, CSV, imágenes y
-                    comprimidos (ZIP/RAR/7z). Tamaño máximo por archivo: 20 MB.
+                    Formatos aceptados: PDF, Word, Excel, PowerPoint, texto, Markdown, CSV,
+                    imágenes, comprimidos (ZIP/RAR/7z) y archivos de código o notebooks
+                    (ipynb, py, js, ts, java, c, cpp, html, css, json, xml, sql, etc.).
+                    Tamaño máximo por archivo: 20 MB.
                   </p>
                 </div>
               </div>

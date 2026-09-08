@@ -701,8 +701,8 @@ function QuestionCard({
               index + 1
             )}
           </span>
-          <div className="flex-1">
-            <h3 className={`text-base sm:text-xl md:text-2xl font-medium font-serif leading-snug ${darkMode ? "text-gray-100" : "text-gray-900"}`}
+          <div className="flex-1 min-w-0">
+            <h3 className={`text-base sm:text-xl md:text-2xl font-medium font-serif leading-snug break-words ${darkMode ? "text-gray-100" : "text-gray-900"}`}
               dangerouslySetInnerHTML={{ __html: question.enunciado }}
             />
             <span className={`inline-block mt-2 text-xs font-semibold px-3 py-1 rounded-full ${darkMode ? "bg-slate-700/60 text-slate-400" : "bg-gray-100 text-slate-500"}`}>

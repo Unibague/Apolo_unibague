@@ -24,6 +24,7 @@ import {
   TimerOff,
   Archive,
   ArchiveRestore,
+  RotateCcw,
 } from "lucide-react";
 import { io } from "socket.io-client";
 import AlertsModal from "../../components/AlertsModal";
@@ -628,6 +629,31 @@ export default function VigilanciaExamenesLista({
         mostrarModal("error", "Error", e?.response?.data?.message || "No se pudo desbloquear el intento.", cerrarModal);
       }
     }, cerrarModal);
+  };
+
+  const handleRegenerarCodigoRevision = (attemptId: number) => {
+    mostrarModal(
+      "confirmar",
+      "Reactivar código de revisión",
+      "El código de revisión anterior ya fue usado por el estudiante para ver su retroalimentación (es de un solo uso). ¿Generar uno nuevo para que pueda volver a consultarla?",
+      async () => {
+        cerrarModal();
+        try {
+          const { codigoRevision } = await examsAttemptsService.regenerateReviewCode(attemptId);
+          setExamAttempts(prev => {
+            if (!examenActual) return prev;
+            return { ...prev, [examenActual.id]: prev[examenActual.id].map(i => i.id === attemptId ? { ...i, codigo_acceso: codigoRevision } : i) };
+          });
+          if (estudianteSeleccionado?.id === attemptId) {
+            setEstudianteSeleccionado(prev => prev ? { ...prev, codigo_acceso: codigoRevision } : null);
+          }
+          mostrarModal("exito", "Código reactivado", `Nuevo código de revisión: ${codigoRevision}`, cerrarModal);
+        } catch (e: any) {
+          mostrarModal("error", "Error", e?.response?.data?.message || "No se pudo regenerar el código de revisión.", cerrarModal);
+        }
+      },
+      cerrarModal,
+    );
   };
 
   const handleLimpiarAlertas = (attemptId: number) => {
@@ -1427,13 +1453,22 @@ export default function VigilanciaExamenesLista({
                                 <span className={`text-sm ${darkMode ? "text-slate-400" : "text-slate-500"}`}>
                                     {modoPrivacidad && !estudiantesRevelados.has(estudianteSeleccionado.id) ? "******" : obtenerInfoVisual(estudianteSeleccionado).secundario}
                                 </span>
-                                {estudianteSeleccionado.codigo_acceso && (
+                                {estudianteSeleccionado.codigo_acceso ? (
                                     <span className={`flex items-center gap-1.5 text-xs ${darkMode ? "text-slate-500" : "text-slate-400"}`}>
                                         <span>{["Terminado", "Calificado"].includes(traducirEstado(estudianteSeleccionado.estado)) ? "Código de revisión:" : "Código de acceso:"}</span>
                                         <span className={`font-mono font-bold tracking-widest px-2 py-0.5 rounded ${darkMode ? "bg-slate-700 text-amber-400" : "bg-amber-50 text-amber-700 border border-amber-200"}`}>
                                             {estudianteSeleccionado.codigo_acceso}
                                         </span>
                                     </span>
+                                ) : estudianteSeleccionado.estado?.toLowerCase() === "finished" && (
+                                    <button
+                                        onClick={() => handleRegenerarCodigoRevision(estudianteSeleccionado.id)}
+                                        title="El código anterior ya fue usado por el estudiante (es de un solo uso). Genera uno nuevo para que pueda volver a ver su retroalimentación."
+                                        className={`flex items-center gap-1.5 text-xs font-semibold px-2 py-0.5 rounded transition-colors ${darkMode ? "bg-slate-700 text-slate-300 hover:bg-slate-600" : "bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200"}`}
+                                    >
+                                        <RotateCcw className="w-3 h-3" />
+                                        Reactivar código de revisión
+                                    </button>
                                 )}
                             </div>
                         </div>

@@ -125,6 +125,11 @@ export const examsAttemptsService = {
     return response.data;
   },
 
+  async regenerateReviewCode(intentoId: number): Promise<{ codigoRevision: string }> {
+    const response = await examsAttemptsApi.post(`/attempt/${intentoId}/regenerate-review-code`);
+    return response.data;
+  },
+
   async uploadAnswerFile(
     intentoId: number,
     preguntaId: number,

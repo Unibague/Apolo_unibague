@@ -6,6 +6,7 @@ import { TipoRespuesta } from "../models/ExamAnswer";
 import { ExamAttemptValidator } from "../validators/ExamAttemptValidator";
 import { In } from "typeorm";
 import { throwHttpError } from "../utils/errors";
+import { generateAccessCode } from "../utils/CodeGenerator";
 import { QuestionResponseBuilder } from "./QuestionResponseBuilder";
 import { internalHttpClient } from "../utils/httpClient";
 import ExcelJS from "exceljs";
@@ -226,6 +227,28 @@ export class AttemptQueryService {
     attempt.codigoRevision = null;
     await attemptRepo.save(attempt);
     return result;
+  }
+
+  static async regenerateReviewCode(intento_id: number): Promise<{ codigoRevision: string }> {
+    const attemptRepo = AppDataSource.getRepository(ExamAttempt);
+
+    const attempt = await attemptRepo.findOne({ where: { id: intento_id } });
+
+    if (!attempt) {
+      throwHttpError("Intento no encontrado", 404);
+    }
+
+    if (attempt.estado !== AttemptState.FINISHED) {
+      throwHttpError(
+        "El código de revisión solo aplica a intentos finalizados",
+        403,
+      );
+    }
+
+    attempt.codigoRevision = generateAccessCode();
+    await attemptRepo.save(attempt);
+
+    return { codigoRevision: attempt.codigoRevision };
   }
 
   static async getActiveAttemptsByExam(examId: number) {

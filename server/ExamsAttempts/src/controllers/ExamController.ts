@@ -510,6 +510,25 @@ export class ExamController {
     }
   }
 
+  static async regenerateReviewCode(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) {
+    try {
+      const intentoId = Number(req.params.intento_id);
+
+      if (!intentoId) {
+        return res.status(400).json({ message: "ID de intento inválido" });
+      }
+
+      const result = await ExamService.regenerateReviewCode(intentoId);
+      res.status(200).json(result);
+    } catch (err) {
+      next(err);
+    }
+  }
+
   static async saveQuestionOrder(
     req: Request,
     res: Response,

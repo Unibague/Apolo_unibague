@@ -154,6 +154,9 @@ export class ExamService {
   static getAttemptFeedback(codigo_acceso: string) {
     return AttemptQueryService.getAttemptFeedback(codigo_acceso);
   }
+  static regenerateReviewCode(intento_id: number) {
+    return AttemptQueryService.regenerateReviewCode(intento_id);
+  }
   static getActiveAttemptsByExam(examId: number) {
     return AttemptQueryService.getActiveAttemptsByExam(examId);
   }

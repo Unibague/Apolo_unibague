@@ -1079,6 +1079,37 @@ router.post('/:examId/grades/send-email', ExamController.sendGrades);
  */
 router.get('/attempt/feedback/:codigo_acceso', ExamController.getAttemptFeedback);
 
+/**
+ * @openapi
+ * /api/exam/attempt/{intento_id}/regenerate-review-code:
+ *   post:
+ *     tags:
+ *       - Attempts
+ *     summary: Regenerar el código de revisión de un intento
+ *     description: El código de revisión es de un solo uso; una vez el estudiante consulta su retroalimentación queda invalidado. Este endpoint permite al profesor generar uno nuevo para que el estudiante pueda volver a consultarla.
+ *     parameters:
+ *       - in: path
+ *         name: intento_id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Código de revisión regenerado
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 codigoRevision:
+ *                   type: string
+ *       403:
+ *         description: El intento no está finalizado
+ *       404:
+ *         description: Intento no encontrado
+ */
+router.post('/attempt/:intento_id/regenerate-review-code', ExamController.regenerateReviewCode);
+
 router.post('/internal/notify-professor', ExamController.notifyProfessor);
 router.post('/attempt/:attemptId/connection-lost', ExamController.notifyConnectionLost);
 

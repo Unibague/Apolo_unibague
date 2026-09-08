@@ -437,6 +437,7 @@ export default function SecureExamPlatform() {
   const integrityCheckRef = useRef<number>(0);
   const examFinishedRef = useRef(false);
   const startupGraceRef = useRef(false); // Ignora eventos de seguridad durante el arranque del examen
+  const fileDialogOpenRef = useRef(false); // Ignora eventos de seguridad mientras el selector nativo de archivos está abierto (preguntas "Subir archivo")
 
   const [studentData, setStudentData] = useState<StudentData | null>(null);
   const [examData, setExamData] = useState<ExamData | null>(null);
@@ -1187,6 +1188,22 @@ export default function SecureExamPlatform() {
     }, delayMs);
   };
 
+  // El selector nativo de archivos (pregunta "Subir archivo") saca al navegador
+  // de pantalla completa. Mientras está abierto, se silencian las detecciones de
+  // seguridad; al cerrarse, se reintenta activar pantalla completa automáticamente.
+  const handleFileDialogChange = (isOpen: boolean) => {
+    fileDialogOpenRef.current = isOpen;
+    if (
+      !isOpen &&
+      examStarted &&
+      !examBlocked &&
+      !examFinished &&
+      !document.fullscreenElement
+    ) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    }
+  };
+
   const mapReasonToEventType = (reason: string): string => {
     if (reason.includes("pantalla completa"))
       return "pantalla_completa_cerrada";
@@ -1906,6 +1923,9 @@ export default function SecureExamPlatform() {
         // Si la pantalla completa se perdió después de estar activa → bloquear.
         // Si aún no se había establecido (arranque), startupGraceRef silencia esto.
         if (startupGraceRef.current) return;
+        // Abrir el selector nativo de archivos (pregunta "Subir archivo") también
+        // saca al navegador de pantalla completa — no es una violación real.
+        if (fileDialogOpenRef.current) return;
         blockExam("El examen requiere pantalla completa. Se detectó que saliste de ella", "CRITICAL");
       }, 100);
     };
@@ -1939,6 +1959,7 @@ export default function SecureExamPlatform() {
     const handleVisibilityChange = () => {
       if (!examStarted || examBlocked || isSubmitting || examFinished || connectionLostRef.current) return;
       if (startupGraceRef.current) return;
+      if (fileDialogOpenRef.current) return;
       if (document.hidden) {
         blockExam("Se detectó que cambiaste de pestaña o minimizaste el navegador", "CRITICAL");
       }
@@ -1958,6 +1979,7 @@ export default function SecureExamPlatform() {
       // Durante el arranque, el navegador puede disparar blur al mostrar la barra de
       // notificación de pantalla completa — silenciar igual que handleFullscreenChange.
       if (startupGraceRef.current) return;
+      if (fileDialogOpenRef.current) return;
       blockExam("Se detectó que la ventana del examen perdió el foco (posible cambio de aplicación)", "CRITICAL");
     };
 
@@ -2278,6 +2300,7 @@ export default function SecureExamPlatform() {
               initialQuestionIndex={initialQuestionIndex}
               onQuestionIndexChange={setInitialQuestionIndex}
               attemptId={studentData?.attemptId}
+              onFileDialogChange={handleFileDialogChange}
             />
           </div>
         );

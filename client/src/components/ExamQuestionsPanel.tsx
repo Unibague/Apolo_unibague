@@ -49,6 +49,7 @@ interface ExamPanelProps {
   initialQuestionIndex?: number;
   onQuestionIndexChange?: (index: number) => void;
   attemptId?: number;
+  onFileDialogChange?: (isOpen: boolean) => void;
 }
 
 const EXAMS_API_URL = import.meta.env.VITE_EXAMS_URL || window.location.origin;
@@ -195,6 +196,7 @@ export default function ExamPanel({
   initialQuestionIndex,
   onQuestionIndexChange,
   attemptId,
+  onFileDialogChange,
 }: ExamPanelProps) {
   const [currentIndex, setCurrentIndex] = useState(() => {
     const init = initialQuestionIndex ?? 0;
@@ -497,6 +499,7 @@ export default function ExamPanel({
                       darkMode={darkMode}
                       readOnly={readOnly}
                       attemptId={attemptId}
+                      onFileDialogChange={onFileDialogChange}
                     />
                   </div>
                 )}
@@ -622,6 +625,7 @@ export default function ExamPanel({
                     darkMode={darkMode}
                     readOnly={readOnly}
                     attemptId={attemptId}
+                    onFileDialogChange={onFileDialogChange}
                   />
                 ))}
               </div>
@@ -649,6 +653,7 @@ function QuestionCard({
   darkMode,
   readOnly,
   attemptId,
+  onFileDialogChange,
 }: {
   question: Question;
   index: number;
@@ -657,6 +662,7 @@ function QuestionCard({
   darkMode: boolean;
   readOnly?: boolean;
   attemptId?: number;
+  onFileDialogChange?: (isOpen: boolean) => void;
 }) {
   // Seleccionamos un color basado en el índice de la pregunta
   const barColor = getStableColor(question.id, QUESTION_COLORS);
@@ -733,7 +739,7 @@ function QuestionCard({
             <MatchQuestion question={question} answer={answer} onChange={onAnswerChange} darkMode={darkMode} readOnly={readOnly} />
           )}
           {question.type === "file_upload" && (
-            <FileUploadQuestion question={question} answer={answer} onChange={onAnswerChange} darkMode={darkMode} readOnly={readOnly} attemptId={attemptId} />
+            <FileUploadQuestion question={question} answer={answer} onChange={onAnswerChange} darkMode={darkMode} readOnly={readOnly} attemptId={attemptId} onFileDialogChange={onFileDialogChange} />
           )}
         </div>
       </div>
@@ -779,12 +785,36 @@ function OpenQuestion({ question, answer, onChange, darkMode, readOnly }: any) {
 }
 
 // 1.b Pregunta de subir archivo (siempre calificada manualmente)
-function FileUploadQuestion({ question, answer, onChange, darkMode, readOnly, attemptId }: any) {
+function FileUploadQuestion({ question, answer, onChange, darkMode, readOnly, attemptId, onFileDialogChange }: any) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploadedName, setUploadedName] = useState<string | null>(null);
 
   const hasFile = typeof answer === "string" && answer.trim().length > 0;
+
+  // Abrir el selector nativo de archivos saca al navegador de pantalla completa.
+  // Avisamos al padre para que el monitor de seguridad no lo trate como una
+  // violación (cambio de pestaña / salida de fullscreen) y luego reintente
+  // activar pantalla completa cuando el diálogo se cierre.
+  const handleTriggerClick = () => {
+    onFileDialogChange?.(true);
+    let settled = false;
+    const closeDialogGrace = () => {
+      if (settled) return;
+      settled = true;
+      window.removeEventListener("focus", handleWindowFocusBack);
+      onFileDialogChange?.(false);
+    };
+    const handleWindowFocusBack = () => {
+      // Pequeño margen para que el evento onChange (si se eligió un archivo)
+      // alcance a dispararse antes de reactivar el monitor de seguridad.
+      setTimeout(closeDialogGrace, 400);
+    };
+    window.addEventListener("focus", handleWindowFocusBack);
+    // Salvaguarda: si por alguna razón el evento focus nunca llega, no dejar
+    // el monitor de seguridad desactivado indefinidamente.
+    setTimeout(closeDialogGrace, 120000);
+  };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -847,7 +877,13 @@ function FileUploadQuestion({ question, answer, onChange, darkMode, readOnly, at
           <span className={`text-xs text-center ${darkMode ? "text-slate-500" : "text-gray-400"}`}>
             PDF, Word, Excel, PowerPoint, texto, imágenes o comprimidos — máx. 20MB
           </span>
-          <input type="file" className="hidden" disabled={uploading} onChange={handleFileSelect} />
+          <input
+            type="file"
+            className="hidden"
+            disabled={uploading}
+            onClick={handleTriggerClick}
+            onChange={handleFileSelect}
+          />
         </label>
       )}
 

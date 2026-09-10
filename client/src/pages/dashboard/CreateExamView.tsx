@@ -915,7 +915,7 @@ export default function CrearExamen({
                       <Check className="w-3 h-3 text-white" />
                     )}
                   </div>
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <div
                       className="font-semibold text-primary"
                     >
@@ -982,7 +982,7 @@ export default function CrearExamen({
                                     {idx + 1}.
                                   </span>
                                   <span
-                                    className="flex-1 min-w-0 text-sm text-primary truncate"
+                                    className="flex-1 min-w-0 basis-0 text-sm text-primary line-clamp-1 break-all"
                                     title={textoPlano || `Pregunta ${idx + 1}`}
                                   >
                                     {textoPlano || `Pregunta ${idx + 1}`}

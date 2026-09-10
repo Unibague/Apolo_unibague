@@ -24,6 +24,20 @@ import { examsApi } from "../../services/examsApi";
 import ConfirmModal from "../../components/ConfirmModal";
 import Collapsible from "../../components/Collapsible";
 
+// Convierte el HTML enriquecido de un enunciado a texto plano de una sola
+// línea, para mostrarlo en listas compactas (ej. la vista de solo-puntaje).
+function enunciadoATextoPlano(html: string): string {
+  if (!html) return "";
+  return html
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 // Convierte una pregunta del formato backend al formato Pregunta del editor
 function mapearPreguntaBackendAFrontend(p: any): any {
   const tipoMap: Record<string, string> = {
@@ -957,7 +971,9 @@ export default function CrearExamen({
                               className="space-y-2 max-h-80 overflow-y-auto pr-1"
                               onClick={(e) => e.stopPropagation()}
                             >
-                              {preguntasAutomaticas.map((pregunta, idx) => (
+                              {preguntasAutomaticas.map((pregunta, idx) => {
+                                const textoPlano = enunciadoATextoPlano(pregunta.titulo);
+                                return (
                                 <div
                                   key={pregunta.id}
                                   className="flex items-center gap-3 px-3 py-2 rounded-lg border border-ui bg-raised"
@@ -965,8 +981,11 @@ export default function CrearExamen({
                                   <span className="text-xs font-medium text-muted w-6 flex-shrink-0">
                                     {idx + 1}.
                                   </span>
-                                  <span className="flex-1 text-sm text-primary truncate" title={pregunta.titulo}>
-                                    {pregunta.titulo || `Pregunta ${idx + 1}`}
+                                  <span
+                                    className="flex-1 min-w-0 text-sm text-primary truncate"
+                                    title={textoPlano || `Pregunta ${idx + 1}`}
+                                  >
+                                    {textoPlano || `Pregunta ${idx + 1}`}
                                   </span>
                                   <div className="flex items-center gap-2 flex-shrink-0">
                                     <input
@@ -991,7 +1010,8 @@ export default function CrearExamen({
                                     <span className="text-xs text-secondary">pts</span>
                                   </div>
                                 </div>
-                              ))}
+                                );
+                              })}
                             </div>
                           </div>
                         ) : (

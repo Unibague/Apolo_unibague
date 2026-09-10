@@ -997,6 +997,39 @@ router.get('/:examId/attempt-count', ExamController.getAttemptCountByExam);
 
 /**
  * @openapi
+ * /api/exam/{examId}/recalculate-scores:
+ *   post:
+ *     tags:
+ *       - Grading
+ *     summary: Recalcular notas de los intentos finalizados de un examen (uso interno)
+ *     description: >
+ *       Recalcula la nota de los intentos ya finalizados (no-PDF) de un examen
+ *       después de que el profesor cambia el puntaje de alguna pregunta. Lo
+ *       invoca el microservicio de Exams al confirmar ese cambio.
+ *     parameters:
+ *       - in: path
+ *         name: examId
+ *         required: true
+ *         schema:
+ *           type: number
+ *         description: ID del examen
+ *     responses:
+ *       200:
+ *         description: Recalculación completada
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 actualizados:
+ *                   type: number
+ *       400:
+ *         description: ID de examen inválido
+ */
+router.post('/:examId/recalculate-scores', ExamController.recalculateScoresForExam);
+
+/**
+ * @openapi
  * /api/exam/{examId}/grades/download:
  *   get:
  *     tags:

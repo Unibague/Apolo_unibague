@@ -221,7 +221,12 @@ export class ExamService {
       );
     }
 
-    return await AppDataSource.transaction(async (manager) => {
+    // Se marca en true si se actualiza el puntaje de alguna pregunta de un
+    // examen que ya tiene intentos, para disparar la recalificación de las
+    // notas de los intentos ya finalizados una vez confirmada la transacción.
+    let puntajesActualizados = false;
+
+    const examActualizado = await AppDataSource.transaction(async (manager) => {
       const { imageService } = await import("./ImageService");
       const { pdfService } = await import("./PDFService");
 
@@ -328,6 +333,32 @@ export class ExamService {
           (q: any) => q.type === "open" || q.type === "file_upload",
         );
         existingExam.tienePreguntasAbiertas = tienePreguntasAbiertas;
+      } else if (data.questions !== undefined && tieneIntentos) {
+        // El examen ya tiene intentos registrados: no se permite crear,
+        // eliminar ni modificar enunciado/opciones/tipo de las preguntas.
+        // Lo único editable en este caso es el puntaje de preguntas existentes.
+        const questionsFromRequest = data.questions as (BaseQuestionDto & {
+          id?: number;
+        })[];
+
+        for (const preguntaDto of questionsFromRequest) {
+          if (preguntaDto.id === undefined) continue; // ignorar preguntas nuevas
+
+          const preguntaExistente = existingExam.questions.find(
+            (q: any) => q.id === preguntaDto.id,
+          );
+          if (!preguntaExistente) continue; // ignorar ids desconocidos
+
+          if (typeof preguntaDto.puntaje !== "number" || !(preguntaDto.puntaje > 0)) {
+            continue;
+          }
+
+          if (preguntaDto.puntaje !== (preguntaExistente as any).puntaje) {
+            await manager.update(Question, { id: preguntaDto.id }, { puntaje: preguntaDto.puntaje });
+            (preguntaExistente as any).puntaje = preguntaDto.puntaje;
+            puntajesActualizados = true;
+          }
+        }
       }
 
       // 3. ACTUALIZAR CAMPOS DEL EXAMEN
@@ -417,6 +448,24 @@ export class ExamService {
 
       return examActualizado;
     });
+
+    // Si se actualizó el puntaje de alguna pregunta de un examen con intentos
+    // registrados, se recalculan las notas de los intentos ya finalizados
+    // para que reflejen el nuevo puntaje.
+    if (puntajesActualizados) {
+      try {
+        await internalHttpClient.post(
+          `${this.EXAM_ATTEMPTS_MS_URL}/api/exam/${examId}/recalculate-scores`,
+        );
+      } catch (err: any) {
+        console.error(
+          `Error al recalcular las notas de los intentos del examen ${examId}:`,
+          err.message,
+        );
+      }
+    }
+
+    return examActualizado;
   }
 
   async listExams() {

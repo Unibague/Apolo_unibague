@@ -146,6 +146,9 @@ export class ExamService {
   static sendGradesEmail(examId: number, io: Server) {
     return ScoringService.sendGradesEmail(examId, io);
   }
+  static recalculateScoresForExam(examId: number, io?: Server) {
+    return ScoringService.recalculateForExam(examId, io);
+  }
 
   // ── Consultas y reportes ──
   static getAttemptDetails(intento_id: number) {

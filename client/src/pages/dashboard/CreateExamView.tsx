@@ -501,6 +501,15 @@ export default function CrearExamen({
     setPreguntasAutomaticasTemp(nuevasPreguntas);
   };
 
+  // Cuando el examen ya tiene intentos registrados, solo se permite editar
+  // el puntaje de cada pregunta existente (enunciado, opciones y tipo quedan
+  // bloqueados). El backend valida y aplica la misma restricción.
+  const handlePuntajeExistenteChange = (id: string, nuevoPuntaje: number) => {
+    setPreguntasAutomaticas((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, puntos: nuevoPuntaje } : p)),
+    );
+  };
+
   // ⭐ NUEVO: Handler para validación de preguntas
   const handleValidationChange = (isValid: boolean) => {
     setPreguntasValidas(isValid);
@@ -627,7 +636,7 @@ export default function CrearExamen({
         tipoPregunta,
         archivoPDF: tipoPregunta === "pdf" ? (archivoPDF || pdfExistente) : null,
         preguntasAutomaticas:
-          tipoPregunta === "automatico" && !tieneIntentos ? preguntasAutomaticas : undefined,
+          tipoPregunta === "automatico" ? preguntasAutomaticas : undefined,
         camposActivos: camposEstudiante.filter((c) => c.activo),
         fechaInicio: fechaInicioHabilitada ? fechaInicio : null,
         fechaCierre: fechaCierreHabilitada ? fechaCierre : null,
@@ -939,9 +948,51 @@ export default function CrearExamen({
                     {tipoPregunta === "automatico" && tipo === "automatico" && (
                       <div className="mt-4">
                         {tieneIntentos ? (
-                          <div className={`flex items-center gap-2 text-sm px-3 py-2 rounded-lg border ${darkMode ? "bg-amber-900/20 border-amber-700/40 text-amber-400" : "bg-amber-50 border-amber-200 text-amber-700"}`}>
-                            <Lock className="w-4 h-4 flex-shrink-0" />
-                            <span>{preguntasAutomaticas.length} pregunta(s) — no modificables porque el examen ya tiene intentos registrados</span>
+                          <div className="space-y-3">
+                            <div className={`flex items-center gap-2 text-sm px-3 py-2 rounded-lg border ${darkMode ? "bg-amber-900/20 border-amber-700/40 text-amber-400" : "bg-amber-50 border-amber-200 text-amber-700"}`}>
+                              <Lock className="w-4 h-4 flex-shrink-0" />
+                              <span>{preguntasAutomaticas.length} pregunta(s) — el enunciado y las opciones no son modificables porque el examen ya tiene intentos registrados. Puedes ajustar el puntaje de cada pregunta.</span>
+                            </div>
+                            <div
+                              className="space-y-2 max-h-80 overflow-y-auto pr-1"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {preguntasAutomaticas.map((pregunta, idx) => (
+                                <div
+                                  key={pregunta.id}
+                                  className="flex items-center gap-3 px-3 py-2 rounded-lg border border-ui bg-raised"
+                                >
+                                  <span className="text-xs font-medium text-muted w-6 flex-shrink-0">
+                                    {idx + 1}.
+                                  </span>
+                                  <span className="flex-1 text-sm text-primary truncate" title={pregunta.titulo}>
+                                    {pregunta.titulo || `Pregunta ${idx + 1}`}
+                                  </span>
+                                  <div className="flex items-center gap-2 flex-shrink-0">
+                                    <input
+                                      type="number"
+                                      min={0.1}
+                                      step={0.1}
+                                      value={pregunta.puntos}
+                                      onChange={(e) => {
+                                        const val = Number(e.target.value);
+                                        if (!isNaN(val)) {
+                                          handlePuntajeExistenteChange(pregunta.id, val);
+                                        }
+                                      }}
+                                      onBlur={(e) => {
+                                        const val = Number(e.target.value);
+                                        if (!val || val <= 0) {
+                                          handlePuntajeExistenteChange(pregunta.id, 1);
+                                        }
+                                      }}
+                                      className="w-20 px-2 py-1.5 rounded-lg border [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none bg-surface border-ui text-primary text-sm"
+                                    />
+                                    <span className="text-xs text-secondary">pts</span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         ) : (
                           <>

@@ -497,4 +497,159 @@ export class ScoringService {
 
     return { enviados, errores, sinCorreo };
   }
+
+  /**
+   * Recalcula la nota de los intentos ya finalizados de un examen después de
+   * que el profesor cambia el puntaje de una o más preguntas. Solo aplica a
+   * exámenes no-PDF. Las preguntas de calificación automática (test,
+   * fill_blanks, match y open con keywords/texto exacto) se recalculan desde
+   * la respuesta guardada del estudiante usando el puntaje actualizado; las
+   * preguntas de calificación manual (open libre y file_upload) conservan el
+   * puntaje que el profesor ya asignó, solo topado al nuevo puntaje máximo.
+   */
+  static async recalculateForExam(
+    examId: number,
+    io?: Server,
+  ): Promise<{ actualizados: number }> {
+    ExamAttemptValidator.invalidateCache(examId);
+    const exam = await ExamAttemptValidator.validateExamExistsById(examId);
+
+    if (!exam.questions || exam.questions.length === 0) {
+      return { actualizados: 0 };
+    }
+
+    const questionsById = new Map<number, any>(
+      exam.questions.map((q: any) => [q.id, q]),
+    );
+    const nuevoPuntajeMaximo = exam.questions.reduce(
+      (sum: number, q: any) => sum + q.puntaje,
+      0,
+    );
+
+    const attemptRepo = AppDataSource.getRepository(ExamAttempt);
+    const answerRepo = AppDataSource.getRepository(ExamAnswer);
+
+    const attempts = await attemptRepo.find({
+      where: {
+        examen_id: examId,
+        estado: AttemptState.FINISHED,
+        esExamenPDF: false,
+      },
+      relations: ["respuestas"],
+    });
+
+    let actualizados = 0;
+
+    for (const attempt of attempts) {
+      let cambios = false;
+
+      for (const studentAnswer of attempt.respuestas || []) {
+        const question = questionsById.get(studentAnswer.pregunta_id);
+        if (!question) continue;
+
+        const esAutoCalificable =
+          question.type === "test" ||
+          question.type === "fill_blanks" ||
+          question.type === "match" ||
+          (question.type === "open" &&
+            (question.textoRespuesta ||
+              (question.keywords && question.keywords.length > 0)));
+
+        let nuevoPuntajePregunta: number;
+
+        if (esAutoCalificable) {
+          switch (question.type) {
+            case "test":
+              nuevoPuntajePregunta = GradingService.gradeTestQuestion(
+                question,
+                studentAnswer,
+              );
+              break;
+            case "open":
+              nuevoPuntajePregunta = GradingService.gradeOpenQuestion(
+                question,
+                studentAnswer,
+              );
+              break;
+            case "fill_blanks":
+              nuevoPuntajePregunta = GradingService.gradeFillBlanksQuestion(
+                question,
+                studentAnswer,
+              );
+              break;
+            case "match":
+              nuevoPuntajePregunta = GradingService.gradeMatchQuestion(
+                question,
+                studentAnswer,
+              );
+              break;
+            default:
+              nuevoPuntajePregunta = studentAnswer.puntaje || 0;
+          }
+          nuevoPuntajePregunta = Math.min(
+            Math.round(nuevoPuntajePregunta * 100) / 100,
+            question.puntaje,
+          );
+        } else {
+          // Calificación manual: se respeta el puntaje ya otorgado, solo se
+          // topa si supera el nuevo puntaje máximo de la pregunta.
+          nuevoPuntajePregunta = Math.min(
+            studentAnswer.puntaje || 0,
+            question.puntaje,
+          );
+        }
+
+        if (studentAnswer.puntaje !== nuevoPuntajePregunta) {
+          studentAnswer.puntaje = nuevoPuntajePregunta;
+          await answerRepo.save(studentAnswer);
+          cambios = true;
+        }
+      }
+
+      const puntajeTotal = (attempt.respuestas || []).reduce(
+        (sum, r) => sum + (r.puntaje || 0),
+        0,
+      );
+      const { porcentaje, notaFinal } = GradingService.calculateFinalGrade(
+        puntajeTotal,
+        nuevoPuntajeMaximo,
+      );
+
+      if (
+        attempt.puntaje !== puntajeTotal ||
+        attempt.puntajeMaximo !== nuevoPuntajeMaximo ||
+        attempt.porcentaje !== porcentaje ||
+        attempt.notaFinal !== notaFinal
+      ) {
+        attempt.puntaje = puntajeTotal;
+        attempt.puntajeMaximo = nuevoPuntajeMaximo;
+        attempt.porcentaje = porcentaje;
+        attempt.notaFinal = notaFinal;
+        await attemptRepo.save(attempt);
+        cambios = true;
+      }
+
+      if (cambios) {
+        actualizados++;
+        if (io) {
+          io.to(`attempt_${attempt.id}`).emit("grade_updated", {
+            attemptId: attempt.id,
+            puntaje: attempt.puntaje,
+            puntajeMaximo: attempt.puntajeMaximo,
+            porcentaje: attempt.porcentaje,
+            notaFinal: attempt.notaFinal,
+          });
+        }
+      }
+    }
+
+    if (io && actualizados > 0) {
+      io.to(`exam_${examId}`).emit("grades_recalculated", {
+        examId,
+        actualizados,
+      });
+    }
+
+    return { actualizados };
+  }
 }

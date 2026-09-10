@@ -424,6 +424,28 @@ export class ExamController {
     }
   }
 
+  static async recalculateScoresForExam(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) {
+    try {
+      const examId = Number(req.params.examId);
+
+      if (isNaN(examId)) {
+        return res.status(400).json({ message: "ID de examen inválido" });
+      }
+
+      const result = await ExamService.recalculateScoresForExam(
+        examId,
+        req.app.get("io"),
+      );
+      res.status(200).json(result);
+    } catch (err) {
+      next(err);
+    }
+  }
+
   static async downloadGrades(
     req: Request,
     res: Response,

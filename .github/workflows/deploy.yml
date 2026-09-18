@@ -35,7 +35,6 @@ jobs:
           --os=win \
           --user="$VPN_USER" \
           --passwd-on-stdin \
-          --servercert pin-sha256:+4XOhCB4GmaXr8/TMWL09EayWRbrz3X8WWAWgu79f9U= \
           "$VPN_HOST" -b
     
     - name: Verify VPN connection

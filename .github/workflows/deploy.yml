@@ -1,0 +1,97 @@
+name: Deploy Apolo
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      WORKSPACE_PATH: "/var/www/Apolo_unibague"
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install OpenConnect
+      run: sudo apt-get install -y openconnect
+
+    - name: Install sshpass
+      run: sudo apt-get install -y sshpass
+
+    - name: Connect to VPN
+      env:
+        VPN_PASSWORD: ${{ secrets.VPN_PASSWORD }}
+        VPN_USER: ${{ secrets.VPN_USER }}
+        VPN_HOST: ${{ secrets.VPN_HOST }}
+      run: |
+        echo "$VPN_PASSWORD" | sudo openconnect \
+          --protocol=gp \
+          --os=win \
+          --user="$VPN_USER" \
+          --passwd-on-stdin \
+          --servercert pin-sha256:+4XOhCB4GmaXr8/TMWL09EayWRbrz3X8WWAWgu79f9U= \
+          "$VPN_HOST" -b
+    
+    - name: Verify VPN connection
+      run: ip a
+
+    - name: List network routes
+      run: ip route
+
+    - name: Test internal connectivity with SSH
+      env:
+        INTERNAL_SSH_PASSWORD: ${{ secrets.INTERNAL_SSH_PASSWORD }}
+        INTERNAL_USER: ${{ secrets.INTERNAL_USER }}
+        INTERNAL_RESOURCE_IP: ${{ secrets.INTERNAL_RESOURCE_IP }} 
+      run: |
+        sshpass -p "$INTERNAL_SSH_PASSWORD" ssh -o StrictHostKeyChecking=no "$INTERNAL_USER@$INTERNAL_RESOURCE_IP" 'echo "SSH connection successful"'
+        
+    - name: Clone repository on remote server
+      env:
+        INTERNAL_SSH_PASSWORD: ${{ secrets.INTERNAL_SSH_PASSWORD }}
+        INTERNAL_USER: ${{ secrets.INTERNAL_USER }}
+        INTERNAL_RESOURCE_IP: ${{ secrets.INTERNAL_RESOURCE_IP }}
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        REPO_URL: "github.com/Unibague/Apolo_unibague"
+      run: |
+        sshpass -p "$INTERNAL_SSH_PASSWORD" ssh -o StrictHostKeyChecking=no "$INTERNAL_USER@$INTERNAL_RESOURCE_IP" "
+          set -euo pipefail
+          trap 'git remote set-url origin https://${REPO_URL}' EXIT
+          cd '$WORKSPACE_PATH'
+          git config --global --add safe.directory '$WORKSPACE_PATH'
+          git remote set-url origin https://x-access-token:${GH_TOKEN}@${REPO_URL}
+          if [[ \$(git status --porcelain) ]]; then
+            git stash
+            STASHED=true
+          else
+            STASHED=false
+          fi
+          git pull origin main
+          if [[ \"\$STASHED\" == \"true\" ]]; then
+            git stash pop || echo 'Warning: nothing to pop'
+          fi
+          git remote set-url origin https://${REPO_URL}
+        "
+      
+    - name: Build project on remote server
+      env:
+          INTERNAL_SSH_PASSWORD: ${{ secrets.INTERNAL_SSH_PASSWORD }}
+          INTERNAL_USER: ${{ secrets.INTERNAL_USER }}
+          INTERNAL_RESOURCE_IP: ${{ secrets.INTERNAL_RESOURCE_IP }} 
+      run: |
+        sshpass -p "$INTERNAL_SSH_PASSWORD" ssh -o StrictHostKeyChecking=no "$INTERNAL_USER@$INTERNAL_RESOURCE_IP" '
+          echo "SSH connection successful"
+          set -euo pipefail
+          cd "'"$WORKSPACE_PATH"'" || exit;
+          if [ -n "$(docker compose ps -q)" ]; then
+            echo "Containers detected, shutting down..."
+            docker compose down
+          fi
+          docker compose up -d --build
+          docker image prune -f'

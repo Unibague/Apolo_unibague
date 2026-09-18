@@ -13,7 +13,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     env:
-      WORKSPACE_PATH: "/var/www/Apolo_unibague"
+      WORKSPACE_PATH: "/var/www/Apolo"
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4

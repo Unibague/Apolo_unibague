@@ -11,7 +11,6 @@ export default defineConfig({
           "vendor-react": ["react", "react-dom", "react-router-dom"],
           "vendor-icons": ["lucide-react"],
           "vendor-socket": ["socket.io-client"],
-          "vendor-firebase": ["firebase/app", "firebase/auth"],
           "vendor-math": ["mathjs"],
         },
       },
